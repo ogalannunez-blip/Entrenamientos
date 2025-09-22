@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Partido de Fútbol</title>
+    <style>
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.verde{background-color:#28a745}.ambar{background-color:#ffc107;color:#333}.rojo{background-color:#dc3545}.setup-section{padding:20px;border:2px dashed #ccc;border-radius:8px;text-align:center}textarea{width:95%;height:200px;margin-top:10px;padding:10px;font-family:monospace}button{background-color:#1a73e8;color:#fff;padding:10px 20px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-top:15px}button:hover{background-color:#1558b8}.reset-button{background-color:#dc3545;font-size:.8em;padding:5px 10px;float:right}.reset-button:hover{background-color:#b02a37}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚽ Gestor de Partido</h1>
+
+    <div id="setup-section" style="display: none;">
+        <h2>Configuración Inicial</h2>
+        <p>Pega aquí tu lista de jugadores en formato JSON para empezar.</p>
+        <textarea id="json-input" placeholder="[&#10;  { &quot;nombre&quot;: &quot;Oliver&quot;, &quot;jugados&quot;: 0, &quot;total&quot;: 0 },&#10;  ...&#10;]"></textarea>
+        <button id="save-button">Guardar y Empezar</button>
+    </div>
+
+    <div id="main-content" style="display:none;">
+        <button id="reset-button" class="reset-button">Reiniciar Datos</button>
+        <div id="resultado"></div>
+        <h2>👥 Lista de Jugadores</h2>
+        <table id="tabla-jugadores">
+            <thead><tr><th>Nombre</th><th>Estado</th><th>Jugados</th><th>Total</th><th>Fiabilidad</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// **PASO 2: PEGA AQUÍ TUS CREDENCIALES DE FIREBASE**
+const firebaseConfig = {
+  apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
+  authDomain: "entrenamientos-5f314.firebaseapp.com",
+  databaseURL: "https://entrenamientos-5f314-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "entrenamientos-5f314",
+  storageBucket: "entrenamientos-5f314.firebasestorage.app",
+  messagingSenderId: "322454738753",
+  appId: "G-SGS7EYBFTZ"
+};
+
+// **PASO 3: INICIALIZAR FIREBASE**
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const dbRef = database.ref('jugadores');
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const setupSection = document.getElementById('setup-section');
+    const mainContent = document.getElementById('main-content');
+    const tablaBody = document.querySelector("#tabla-jugadores tbody");
+
+    // Escuchar cambios en la base de datos en tiempo real
+    dbRef.on('value', (snapshot) => {
+        const jugadores = snapshot.val();
+        if (jugadores) {
+            iniciarApp(jugadores);
+        } else {
+            setupSection.style.display = 'block';
+            mainContent.style.display = 'none';
+        }
+    });
+
+    // Lógica de los botones de configuración (para la primera vez)
+    document.getElementById('save-button').addEventListener('click', () => {
+        const jsonText = document.getElementById('json-input').value;
+        try {
+            const jugadoresData = JSON.parse(jsonText);
+            jugadoresData.forEach(j => j.status = 'pendiente');
+            dbRef.set(jugadoresData); // Guardar en Firebase
+        } catch (error) {
+            alert('Error: El formato del JSON no es válido.');
+        }
+    });
+
+    document.getElementById('reset-button').addEventListener('click', () => {
+        if (confirm('¿Estás seguro de que quieres borrar todos los datos? Esto afectará a todo el equipo.')) {
+            dbRef.remove(); // Borrar los datos de Firebase
+        }
+    });
+
+    function iniciarApp(jugadores) {
+        setupSection.style.display = 'none';
+        mainContent.style.display = 'block';
+        inicializarTabla(jugadores);
+        calcularNecesidad(jugadores);
+    }
+
+    function inicializarTabla(jugadores) {
+        tablaBody.innerHTML = '';
+        jugadores.forEach((jugador, index) => {
+            const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
+            const fila = document.createElement('tr');
+            fila.dataset.index = index; // Usar índice para identificar la fila
+            
+            const status = jugador.status || 'pendiente';
+
+            fila.innerHTML = `
+                <td>${jugador.nombre}</td>
+                <td>
+                    <div class="status-radio">
+                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
+                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
+                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''}> Pendiente</label>
+                    </div>
+                </td>
+                <td><input type="number" class="jugados" value="${jugador.jugados}" min="0"></td>
+                <td><input type="number" class="total" value="${jugador.total}" min="0"></td>
+                <td class="fiabilidad">${fiabilidad}</td>
+            `;
+            tablaBody.appendChild(fila);
+        });
+
+        document.querySelectorAll('input[type="radio"], input[type="number"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const fila = e.target.closest('tr');
+                const index = fila.dataset.index;
+                const jugados = parseInt(fila.querySelector('.jugados').value) || 0;
+                const total = parseInt(fila.querySelector('.total').value) || 0;
+                const status = fila.querySelector('input[type="radio"]:checked').value;
+
+                // Actualizar el jugador específico en Firebase
+                database.ref(`jugadores/${index}`).update({ jugados, total, status });
+            });
+        });
+    }
+
+    function calcularNecesidad(jugadores) {
+        const JUGADORES_NECESARIOS = 10;
+        let confirmados = 0, proyeccionPendientes = 0, pendientesCount = 0;
+
+        const ahora = new Date();
+        const proximoMiercoles = new Date();
+        proximoMiercoles.setDate(ahora.getDate() + (3 + 7 - ahora.getDay()) % 7);
+        proximoMiercoles.setHours(21, 0, 0, 0);
+        if (ahora > proximoMiercoles) proximoMiercoles.setDate(proximoMiercoles.getDate() + 7);
+        const horasRestantes = (proximoMiercoles - ahora) / 36e5;
+
+        let factorConfianza = 0.25;
+        if (horasRestantes > 72) factorConfianza = 0.9;
+        else if (horasRestantes > 48) factorConfianza = 0.75;
+        else if (horasRestantes > 24) factorConfianza = 0.5;
+        
+        jugadores.forEach(jugador => {
+            if(jugador.status === 'si') confirmados++;
+            else if (jugador.status === 'pendiente'){
+                const fiabilidad = jugador.total > 0 ? jugador.jugados / jugador.total : 0;
+                proyeccionPendientes += fiabilidad;
+                pendientesCount++;
+            }
+        });
+        
+        const proyeccionAjustada = confirmados + (proyeccionPendientes * factorConfianza);
+        const probabilidad = Math.min(100, (proyeccionAjustada / JUGADORES_NECESARIOS) * 100);
+        const resultadoDiv = document.getElementById('resultado');
+        let recomendacion = "", claseColor = "";
+
+        if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado! Todo va sobre ruedas."; }
+        else if (probabilidad >= 75) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que seguir atentos a los pendientes."; }
+        else if (probabilidad >= 50) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa. Anima a los indecisos."; }
+        else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Hay pocas probabilidades. Empieza a buscar gente fuera YA."; }
+        if (confirmados >= 10) { claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${confirmados}.`; }
+
+        resultadoDiv.className = 'resultado ' + claseColor;
+        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p><p class="recomendacion">${recomendacion}</p><div class="resumen">Confirmados: <strong>${confirmados}</strong> | Proyección (ajustada): <strong>${proyeccionAjustada.toFixed(1)} / ${JUGADORES_NECESARIOS}</strong> | Pendientes: <strong>${pendientesCount}</strong></div>`;
+    }
+});
+</script>
+
+</body>
+</html>
