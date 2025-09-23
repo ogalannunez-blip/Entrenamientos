@@ -5,7 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;}.lista-apuntados li{display:flex;justify-content:space-between;align-items:center;padding:2px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:8px;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block !important;}}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;}.lista-apuntados li{display:flex;align-items:center;padding:3px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:auto;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
+        /* --- ESTILOS PARA ICONOS --- */
+        .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:1px solid rgba(0,0,0,.1);font-size:.9em}
+        .icon-si{background-color:#28a745}
+        .icon-pendiente{background-color:#ffc107;color:#333}
+        .icon-no{background-color:#dc3545}
+        #admin-test-section button{padding:5px 10px;margin-left:5px;}
+        @media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block !important;}}
     </style>
 </head>
 <body>
@@ -27,6 +34,14 @@
             <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Jugados</th><th class="admin-only">Total</th><th class="admin-only">Bajas</th><th>Fiabilidad</th></tr></thead>
             <tbody></tbody>
         </table>
+        <div id="admin-test-section" style="display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px;">
+            <h4 style="margin-top:0;">Modo Test (Admin)</h4>
+            <label for="test-date">Simular Fecha y Hora:</label>
+            <input type="datetime-local" id="test-date">
+            <button id="apply-test-date">Aplicar</button>
+            <button id="reset-test-date">Hora Real</button>
+            <p id="current-time-display" style="font-size: 0.9em; color: #555; margin-top: 10px;"></p>
+        </div>
     </div>
 </div>
 
@@ -46,7 +61,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "", isAdmin = false, loggedInPlayer = null;
-let currentDbData = null; // Empezar como null
+let currentDbData = null;
+let simulatedTime = null; // Para el modo test
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
@@ -87,36 +103,32 @@ document.getElementById('player-login').addEventListener('click', () => {
 // --- LÓGICA DE RENDERIZADO Y EVENTOS ---
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Listener principal de Firebase
     database.ref().on('value', async (snapshot) => {
         const data = snapshot.val();
         if (data && data.jugadores) {
             currentDbData = data;
             
-            // Lógica de reseteo automático
-            const ahora = new Date();
+            const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             const resetTime = new Date(nextMatchDate);
             resetTime.setHours(22, 0, 0, 0);
 
             if (ahora > resetTime) {
                 const newMatchDate = getNextWednesday();
-                const updates = {};
-                currentDbData.jugadores.forEach((player, index) => {
+                const updates = {
+                    'refuerzos': null,
+                    'matchInfo/nextMatchDate': newMatchDate.toISOString()
+                };
+                currentDbData.jugadores.forEach((_, index) => {
                     updates[`jugadores/${index}/status`] = 'pendiente';
                 });
-                updates['matchInfo/nextMatchDate'] = newMatchDate.toISOString();
-                updates['refuerzos'] = null;
-                // Actualiza la base de datos, el listener `on('value')` se volverá a ejecutar y renderizará
                 await database.ref().update(updates); 
             } else {
-                // Si no hay que resetear, simplemente renderiza la interfaz
                 renderUI();
             }
         }
     });
 
-    // Delegación de eventos para los cambios en la tabla
     document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
         const fila = e.target.closest('tr');
         if(!fila) return;
@@ -128,6 +140,18 @@ document.addEventListener('DOMContentLoaded', function() {
             bajas: parseInt(fila.querySelector('.bajas').value)
         };
         database.ref(`jugadores/${index}`).update(updateData);
+    });
+
+    // Listeners Modo Test
+    document.getElementById('apply-test-date').addEventListener('click', () => {
+        const dateValue = document.getElementById('test-date').value;
+        simulatedTime = dateValue ? new Date(dateValue) : null;
+        renderUI();
+    });
+    document.getElementById('reset-test-date').addEventListener('click', () => {
+        simulatedTime = null;
+        document.getElementById('test-date').value = '';
+        renderUI();
     });
 
     // Resto de listeners
@@ -170,6 +194,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // --- FUNCIONES AUXILIARES ---
 
+function getCurrentTime() {
+    return simulatedTime ? new Date(simulatedTime) : new Date();
+}
+
 function renderUI() {
     if (!currentDbData) return;
     document.getElementById('main-content').style.display = 'block';
@@ -191,8 +219,7 @@ function renderSummary() {
 
     jugadores.forEach(j => {
         if (j.status === 'si') {
-            confirmados++;
-            listaSi.push(j.nombre);
+            confirmados++; listaSi.push(j.nombre);
         } else if (j.status === 'no') {
             listaNo.push(j.nombre);
         } else {
@@ -203,7 +230,7 @@ function renderSummary() {
     });
 
     const totalConfirmados = confirmados + listaRefuerzos.length;
-    const ahora = new Date();
+    const ahora = getCurrentTime();
     const horasRestantes = (matchDate - ahora) / 36e5;
     let factorConfianza = (horasRestantes > 72) ? 0.8 : (horasRestantes > 48) ? 0.6 : (horasRestantes > 31) ? 0.3 : 0.15;
     const proyeccionAjustada = totalConfirmados + (proyeccionPendientes * factorConfianza);
@@ -219,14 +246,14 @@ function renderSummary() {
 
     document.getElementById('refuerzos-section').style.display = (claseColor !== 'verde' && (isAdmin || loggedInPlayer)) ? 'block' : 'none';
 
-    const siHtml = listaSi.map(n => `<li><span style="color: #28a745; font-weight: bold;">✔</span> ${n}</li>`).join('');
+    const siHtml = listaSi.map(n => `<li><span class="status-icon icon-si">✔</span> ${n}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
         const delBtn = puedeBorrar ? `<span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span>` : '';
-        return `<li><span style="color: #28a745; font-weight: bold;">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i> ${delBtn}</li>`;
+        return `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i> ${delBtn}</li>`;
     }).join('');
-    const pendienteHtml = listaPendiente.map(n => `<li><span style="color: #ffc107; font-weight: bold;">?</span> ${n}</li>`).join('');
-    const noHtml = listaNo.map(n => `<li><span style="color: #dc3545; font-weight: bold;">✖</span> ${n}</li>`).join('');
+    const pendienteHtml = listaPendiente.map(n => `<li><span class="status-icon icon-pendiente">?</span> ${n}</li>`).join('');
+    const noHtml = listaNo.map(n => `<li><span class="status-icon icon-no">✖</span> ${n}</li>`).join('');
 
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
@@ -244,13 +271,11 @@ function renderTable() {
         const fila = `
             <tr data-index="${index}">
                 <td>${jugador.nombre}</td>
-                <td>
-                    <div class="status-radio">
-                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
-                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
-                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''}> Pendiente</label>
-                    </div>
-                </td>
+                <td><div class="status-radio">
+                    <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
+                    <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
+                    <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''}> Pendiente</label>
+                </div></td>
                 <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0"></td>
                 <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0"></td>
                 <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0"></td>
@@ -261,13 +286,20 @@ function renderTable() {
 }
 
 function applyVisibility() {
+    const testSection = document.getElementById('admin-test-section');
+    testSection.style.display = isAdmin ? 'block' : 'none';
+    if(isAdmin) {
+        const timeDisplay = document.getElementById('current-time-display');
+        const now = getCurrentTime();
+        timeDisplay.textContent = `Hora del sistema: ${now.toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })} ${simulatedTime ? '(SIMULADA)' : ''}`;
+    }
+
     document.getElementById('tabla-jugadores').style.display = (isAdmin || loggedInPlayer) ? '' : 'none';
     document.body.classList.toggle('admin-view', isAdmin);
 
     document.querySelectorAll('#tabla-jugadores tbody tr').forEach(fila => {
         const index = parseInt(fila.dataset.index, 10);
         const isPlayerRow = loggedInPlayer && loggedInPlayer.index === index;
-
         if (loggedInPlayer && !isAdmin) {
             fila.style.display = isPlayerRow ? '' : 'none';
         }
@@ -278,15 +310,16 @@ function applyVisibility() {
 }
 
 function getNextWednesday() {
-    const d = new Date();
+    const d = getCurrentTime();
     const today = d.getDay();
     const offset = (3 - today + 7) % 7;
-    d.setDate(d.getDate() + offset);
-    d.setHours(21, 0, 0, 0);
-    if (offset === 0 && new Date() > d) {
-        d.setDate(d.getDate() + 7);
+    const newDate = new Date(d);
+    newDate.setDate(d.getDate() + offset);
+    newDate.setHours(21, 0, 0, 0);
+    if (offset === 0 && d > newDate) {
+        newDate.setDate(newDate.getDate() + 7);
     }
-    return d;
+    return newDate;
 }
 </script>
 </body>
