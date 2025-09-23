@@ -176,20 +176,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const fila = document.createElement('tr');
             fila.dataset.index = index;
             const status = jugador.status || 'pendiente';
-            const isEditable = (isAdmin || (loggedInPlayer && loggedInPlayer.index === index));
+            
+            // --- Lógica de quién puede editar qué ---
+            const isPlayerEditable = (loggedInPlayer && loggedInPlayer.index === index);
+            const isAdminEditable = isAdmin; // El admin siempre puede editar los campos de admin
 
             fila.innerHTML = `
                 <td>${jugador.nombre}</td>
                 <td>
                     <div class="status-radio">
-                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''} ${isEditable ? '' : 'disabled'}> Sí</label>
-                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''} ${isEditable ? '' : 'disabled'}> No</label>
-                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''} ${isEditable ? '' : 'disabled'}> Pendiente</label>
+                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> Sí</label>
+                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> No</label>
+                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> Pendiente</label>
                     </div>
                 </td>
-                <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0"></td>
-                <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0"></td>
-                <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0"></td>
+                <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
+                <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
+                <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
                 <td class="fiabilidad">${fiabilidad}</td>
             `;
             tablaBody.appendChild(fila);
