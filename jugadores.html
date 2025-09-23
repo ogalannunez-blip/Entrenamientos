@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -43,7 +44,6 @@ const firebaseConfig = {
   messagingSenderId: "322454738753",
   appId: "G-SGS7EYBFTZ"
 };
-
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "", isAdmin = false, loggedInPlayer = null;
@@ -54,18 +54,14 @@ database.ref('config/password').once('value', (snapshot) => { adminPassword = sn
 
 document.getElementById('admin-lock').addEventListener('click', () => {
     if (isAdmin) {
-        isAdmin = false;
-        loggedInPlayer = null;
+        isAdmin = false; loggedInPlayer = null;
         document.getElementById('login-info').textContent = 'Identifícate para responder';
     } else {
         const pass = prompt('Introduce la contraseña de administrador:');
         if (pass === adminPassword) {
-            isAdmin = true;
-            loggedInPlayer = null;
+            isAdmin = true; loggedInPlayer = null;
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
-        } else if (pass) {
-            alert('Contraseña incorrecta.');
-        }
+        } else if (pass) { alert('Contraseña incorrecta.'); }
     }
     actualizarPermisosYVisibilidad();
 });
@@ -77,8 +73,7 @@ document.getElementById('player-login').addEventListener('click', () => {
     const playerIndex = parseInt(playerIndexInput) - 1;
 
     if (isNaN(playerIndex) || playerIndex < 0 || playerIndex >= currentDbData.jugadores.length) {
-        if(playerIndexInput) alert("Número de jugador no válido.");
-        return;
+        if(playerIndexInput) alert("Número de jugador no válido."); return;
     }
 
     const playerPassword = prompt(`Hola ${currentDbData.jugadores[playerIndex].nombre}, introduce tu contraseña:`);
@@ -86,32 +81,35 @@ document.getElementById('player-login').addEventListener('click', () => {
         loggedInPlayer = {...currentDbData.jugadores[playerIndex], index: playerIndex};
         isAdmin = false;
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${currentDbData.jugadores[playerIndex].nombre}`;
-    } else if(playerPassword) {
-        alert('Contraseña incorrecta.');
-    }
+    } else if(playerPassword) { alert('Contraseña incorrecta.'); }
     actualizarPermisosYVisibilidad();
 });
 
-// --- FUNCIÓN CENTRAL PARA ACTUALIZAR PERMISOS ---
+// --- FUNCIÓN CENTRAL, DIRECTA Y A PRUEBA DE ERRORES ---
 function actualizarPermisosYVisibilidad() {
-    const tablaBody = document.querySelector("#tabla-jugadores tbody");
     document.body.classList.toggle('admin-view', isAdmin);
+    
+    document.querySelectorAll('#tabla-jugadores tbody tr').forEach((fila) => {
+        const index = parseInt(fila.dataset.index, 10);
+        const isPlayerRow = (loggedInPlayer && loggedInPlayer.index === index);
 
-    tablaBody.querySelectorAll('tr').forEach((fila, index) => {
-        const isPlayerRowEditable = (loggedInPlayer && loggedInPlayer.index === index);
-        
+        // Activar/desactivar inputs de estado (Sí/No/Pendiente)
         fila.querySelectorAll('input[type="radio"]').forEach(input => {
-            input.disabled = !(isAdmin || isPlayerRowEditable);
+            input.disabled = !(isAdmin || isPlayerRow);
         });
 
+        // Activar/desactivar inputs de admin (Jugados, Total, Bajas)
         fila.querySelectorAll('input[type="number"]').forEach(input => {
             input.disabled = !isAdmin;
         });
     });
 
-    // Vuelve a calcular el estado para mostrar u ocultar la sección de refuerzos
+    // Recalcular el estado para mostrar u ocultar la sección de refuerzos
     if (currentDbData.jugadores) {
-        calcularNecesidad(currentDbData.jugadores, currentDbData.refuerzos, new Date(currentDbData.matchInfo.nextMatchDate));
+        const matchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) 
+            ? new Date(currentDbData.matchInfo.nextMatchDate) 
+            : getNextWednesday();
+        calcularNecesidad(currentDbData.jugadores, currentDbData.refuerzos, matchDate);
     }
 }
 
@@ -127,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function checkForAutoReset() {
         const ahora = new Date();
-        let nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
         const resetTime = new Date(nextMatchDate);
         resetTime.setHours(22, 0, 0, 0);
 
@@ -155,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         inicializarTabla(jugadores);
         calcularNecesidad(jugadores, refuerzos, matchDate);
-        actualizarPermisosYVisibilidad(); // Asegurarse de que los permisos se aplican al cargar datos
+        actualizarPermisosYVisibilidad();
     }
     
     document.getElementById('reset-button').addEventListener('click', () => { /* ... sin cambios ... */ });
@@ -163,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function inicializarTabla(jugadores) {
         const tablaBody = document.querySelector("#tabla-jugadores tbody");
-        tablaBody.innerHTML = ''; // Limpiar la tabla antes de volver a dibujarla
+        tablaBody.innerHTML = '';
         jugadores.forEach((jugador, index) => {
             const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
             const fila = document.createElement('tr');
@@ -187,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
             tablaBody.appendChild(fila);
         });
 
-        // Este listener se encarga de guardar los cambios en la BD
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', (e) => {
                 if(!e.target.closest('tr')) return;
