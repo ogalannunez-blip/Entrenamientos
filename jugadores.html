@@ -36,21 +36,19 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-
 <script>
-// **PASO 2: PEGA AQUÍ TUS CREDENCIALES DE FIREBASE**
+// --- PEGA AQUÍ TUS CREDENCIALES DE FIREBASE ---
 const firebaseConfig = {
-    apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
-    authDomain: "entrenamientos-5f314.firebaseapp.com",
-    databaseURL: "https://entrenamientos-5f314-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "entrenamientos-5f314",
-    storageBucket: "entrenamientos-5f314.firebasestorage.app",
-    messagingSenderId: "322454738753",
-    appId: "1:322454738753:web:8b4569a421b33f868573c0",
-    measurementId: "G-SGS7EYBFTZ"
-  };
+  apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
+  authDomain: "entrenamientos-5f314.firebaseapp.com",
+  databaseURL: "https://entrenamientos-5f314-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "entrenamientos-5f314",
+  storageBucket: "entrenamientos-5f314.firebasestorage.app",
+  messagingSenderId: "322454738753",
+  appId: "G-SGS7EYBFTZ"
+};
 
-firebase.initializeApp(firebaseConf"ig);
+firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "";
 let isAdmin = false;
