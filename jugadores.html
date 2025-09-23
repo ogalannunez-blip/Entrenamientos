@@ -37,7 +37,6 @@
 
 <script>
 // --- PEGA AQUÍ TUS CREDENCIALES DE FIREBASE ---
-
 const firebaseConfig = {
   apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
   authDomain: "entrenamientos-5f314.firebaseapp.com",
@@ -47,7 +46,7 @@ const firebaseConfig = {
   messagingSenderId: "322454738753",
   appId: "G-SGS7EYBFTZ"
 };
-    
+
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "", isAdmin = false, loggedInPlayer = null, fullPlayerList = [];
@@ -57,7 +56,8 @@ database.ref('config/password').once('value', (snapshot) => { adminPassword = sn
 
 document.getElementById('admin-lock').addEventListener('click', () => {
     if (isAdmin) {
-        isAdmin = false; loggedInPlayer = null;
+        isAdmin = false;
+        loggedInPlayer = null;
         document.body.classList.remove('admin-view');
         document.getElementById('admin-lock').textContent = '🔓';
         document.getElementById('login-info').textContent = 'Identifícate para responder';
@@ -65,7 +65,8 @@ document.getElementById('admin-lock').addEventListener('click', () => {
     } else {
         const pass = prompt('Introduce la contraseña de administrador:');
         if (pass === adminPassword) {
-            isAdmin = true; loggedInPlayer = null;
+            isAdmin = true;
+            loggedInPlayer = null;
             document.body.classList.add('admin-view');
             document.getElementById('admin-lock').textContent = '🔒';
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
@@ -90,9 +91,11 @@ document.getElementById('player-login').addEventListener('click', () => {
     if (playerPassword === fullPlayerList[playerIndex].password) {
         loggedInPlayer = {...fullPlayerList[playerIndex], index: playerIndex};
         isAdmin = false;
+        
         document.body.classList.remove('admin-view');
         document.getElementById('admin-lock').textContent = '🔓';
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${fullPlayerList[playerIndex].nombre}`;
+        
         iniciarApp({jugadores: fullPlayerList, refuerzos: fullPlayerList.refuerzos}, new Date(document.getElementById('match-date-title').dataset.date));
     } else if(playerPassword) {
         alert('Contraseña incorrecta.');
@@ -108,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dbData && dbData.jugadores) {
             mainContent.style.display = 'block';
             fullPlayerList = dbData.jugadores;
-            fullPlayerList.refuerzos = dbData.refuerzos; // Adjuntar refuerzos
+            fullPlayerList.refuerzos = dbData.refuerzos;
             checkForAutoReset(dbData);
         }
     });
@@ -132,6 +135,16 @@ document.addEventListener('DOMContentLoaded', function() {
             iniciarApp(dbData, nextMatchDate);
         }
     }
+    
+    document.getElementById('reset-button').addEventListener('click', () => {
+        if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
+            const updates = {};
+            fullPlayerList.forEach((player, index) => {
+                updates[`jugadores/${index}/status`] = 'pendiente';
+            });
+            database.ref().update(updates);
+        }
+    });
 
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
@@ -144,17 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert("Debes identificarte primero para añadir un refuerzo.");
         }
     });
-    
-    document.getElementById('reset-button').addEventListener('click', () => {
-        if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
-            const updates = {};
-            fullPlayerList.forEach((player, index) => {
-                updates[`jugadores/${index}/status`] = 'pendiente';
-            });
-            database.ref().update(updates);
-        }
-    });
-
 
     function iniciarApp(dbData, matchDate) {
         const jugadores = dbData.jugadores;
@@ -177,22 +179,21 @@ document.addEventListener('DOMContentLoaded', function() {
             fila.dataset.index = index;
             const status = jugador.status || 'pendiente';
             
-            // --- Lógica de quién puede editar qué ---
-            const isPlayerEditable = (loggedInPlayer && loggedInPlayer.index === index);
-            const isAdminEditable = isAdmin; // El admin siempre puede editar los campos de admin
+            const isPlayerRowEditable = (loggedInPlayer && loggedInPlayer.index === index);
+            const isRowEditableByAdmin = isAdmin;
 
             fila.innerHTML = `
                 <td>${jugador.nombre}</td>
                 <td>
                     <div class="status-radio">
-                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> Sí</label>
-                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> No</label>
-                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''} ${isAdminEditable || isPlayerEditable ? '' : 'disabled'}> Pendiente</label>
+                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''} ${isRowEditableByAdmin || isPlayerRowEditable ? '' : 'disabled'}> Sí</label>
+                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''} ${isRowEditableByAdmin || isPlayerRowEditable ? '' : 'disabled'}> No</label>
+                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''} ${isRowEditableByAdmin || isPlayerRowEditable ? '' : 'disabled'}> Pendiente</label>
                     </div>
                 </td>
-                <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
-                <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
-                <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0" ${isAdminEditable ? '' : 'disabled'}></td>
+                <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0" ${isRowEditableByAdmin ? '' : 'disabled'}></td>
+                <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0" ${isRowEditableByAdmin ? '' : 'disabled'}></td>
+                <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0" ${isRowEditableByAdmin ? '' : 'disabled'}></td>
                 <td class="fiabilidad">${fiabilidad}</td>
             `;
             tablaBody.appendChild(fila);
@@ -216,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function calcularNecesidad(jugadores, refuerzos, matchDate) {
         const JUGADORES_NECESARIOS = 10;
         let confirmados = 0, proyeccionPendientes = 0, pendientesCount = 0;
-        const listaApuntados = [], listaRefuerzos = Object.values(refuerzos).map(r => r.nombre);
+        const listaApuntados = [], listaRefuerzos = Object.values(refuerzos || {}).map(r => r.nombre);
         const numRefuerzos = listaRefuerzos.length;
 
         jugadores.forEach(jugador => {
@@ -298,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getNextWednesday() {
         const d = new Date();
         const today = d.getDay();
-        const offset = (today <= 3) ? (3 - today) : (10 - today); // Sunday is 0, Wednesday is 3
+        const offset = (today <= 3) ? (3 - today) : (10 - today);
         d.setDate(d.getDate() + offset);
         d.setHours(21, 0, 0, 0);
         
@@ -311,4 +312,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </body>
-    </html>
+</html>
