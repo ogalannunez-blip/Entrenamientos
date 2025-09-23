@@ -5,27 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.verde{background-color:#28a745}.ambar{background-color:#ffc107;color:#333}.rojo{background-color:#dc3545}.setup-section{padding:20px;border:2px dashed #ccc;border-radius:8px;text-align:center}textarea{width:95%;height:200px;margin-top:10px;padding:10px;font-family:monospace}button{background-color:#1a73e8;color:#fff;padding:10px 20px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-top:15px}button:hover{background-color:#1558b8}.reset-button{background-color:#dc3545;font-size:.8em;padding:5px 10px;float:right}.reset-button:hover{background-color:#b02a37}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;padding-left:15px;max-height:100px;overflow-y:auto}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell}.admin-view .admin-button{display:block}#admin-lock{cursor:pointer;font-size:1.5em}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block}}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚽ Gestor de Partido</h1>
+    <h1><span id="admin-lock">🔓</span> Gestor de Partido</h1>
+    <h2 id="match-date-title"></h2>
 
-    <div id="setup-section" style="display: none;">
-        <h2>Configuración Inicial</h2>
-        <p>Pega aquí tu lista de jugadores en formato JSON para empezar.</p>
-        <textarea id="json-input" placeholder="[&#10;  { &quot;nombre&quot;: &quot;Oliver&quot;, &quot;jugados&quot;: 0, &quot;total&quot;: 0 },&#10;  ...&#10;]"></textarea>
-        <button id="save-button">Guardar y Empezar</button>
-    </div>
-
-    <div id="main-content" style="display:none;">
-        <button id="reset-button" class="reset-button">Reiniciar Datos</button>
+    <div id="main-content">
+        <button id="reset-button" class="reset-button admin-only admin-button" style="display:none">Resetear Asistencia</button>
         <div id="resultado"></div>
-        <h2>👥 Lista de Jugadores</h2>
         <table id="tabla-jugadores">
-            <thead><tr><th>Nombre</th><th>Estado</th><th>Jugados</th><th>Total</th><th>Fiabilidad</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th class="admin-only">Jugados</th>
+                    <th class="admin-only">Total</th>
+                    <th class="admin-only">Bajas</th>
+                    <th>Fiabilidad</th>
+                </tr>
+            </thead>
             <tbody></tbody>
         </table>
     </div>
@@ -35,30 +37,236 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// **PASO 2: PEGA AQUÍ TUS CREDENCIALES DE FIREBASE**
+// --- PEGA AQUÍ TUS CREDENCIALES DE FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
-  authDomain: "entrenamientos-5f314.firebaseapp.com",
-  databaseURL: "https://entrenamientos-5f314-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "entrenamientos-5f314",
-  storageBucket: "entrenamientos-5f314.firebasestorage.app",
-  messagingSenderId: "322454738753",
-  appId: "G-SGS7EYBFTZ"
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_AUTH_DOMAIN",
+    databaseURL: "TU_DATABASE_URL",
+    projectId: "TU_PROJECT_ID",
+    storageBucket: "TU_STORAGE_BUCKET",
+    messagingSenderId: "TU_MESSAGING_SENDER_ID",
+    appId: "TU_APP_ID"
 };
 
-// **PASO 3: INICIALIZAR FIREBASE**
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
-const dbRef = database.ref('jugadores');
+let adminPassword = "";
+let isAdmin = false;
+
+// --- LÓGICA DE ADMINISTRADOR ---
+database.ref('config/password').once('value', (snapshot) => {
+    adminPassword = snapshot.val();
+});
+
+document.getElementById('admin-lock').addEventListener('click', () => {
+    if (isAdmin) {
+        isAdmin = false;
+        document.body.classList.remove('admin-view');
+        document.getElementById('admin-lock').textContent = '🔓';
+    } else {
+        const pass = prompt('Introduce la contraseña de administrador:');
+        if (pass === adminPassword) {
+            isAdmin = true;
+            document.body.classList.add('admin-view');
+            document.getElementById('admin-lock').textContent = '🔒';
+        } else if(pass) {
+            alert('Contraseña incorrecta.');
+        }
+    }
+});
+
 
 document.addEventListener('DOMContentLoaded', function() {
-    
-    const setupSection = document.getElementById('setup-section');
     const mainContent = document.getElementById('main-content');
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
 
     // Escuchar cambios en la base de datos en tiempo real
-    dbRef.on('value', (snapshot) => {
-        const jugadores = snapshot.val();
-        if (jugadores) {
-            iniciarApp(jugadores);
+    database.ref().on('value', (snapshot) => {
+        const dbData = snapshot.val();
+        if (dbData && dbData.jugadores) {
+            mainContent.style.display = 'block';
+            checkForAutoReset(dbData);
+        }
+    });
+
+    async function checkForAutoReset(dbData) {
+        const ahora = new Date();
+        let nextMatchDate = dbData.matchInfo ? new Date(dbData.matchInfo.nextMatchDate) : null;
+
+        // Si no hay fecha de partido, calcular la próxima
+        if (!nextMatchDate) {
+            nextMatchDate = getNextWednesday();
+            await database.ref('matchInfo/nextMatchDate').set(nextMatchDate.toISOString());
+            return;
+        }
+
+        const resetTime = new Date(nextMatchDate);
+        resetTime.setHours(22, 0, 0, 0); // Miércoles a las 22:00
+
+        if (ahora > resetTime) {
+            // Es hora de resetear para la siguiente semana
+            const newMatchDate = getNextWednesday();
+            const updates = {};
+            dbData.jugadores.forEach((player, index) => {
+                updates[`jugadores/${index}/status`] = 'pendiente';
+            });
+            updates['matchInfo/nextMatchDate'] = newMatchDate.toISOString();
+            await database.ref().update(updates);
+            // La propia escucha de Firebase recargará los datos
+        } else {
+            // No es hora de resetear, simplemente renderizar
+            iniciarApp(dbData.jugadores, nextMatchDate);
+        }
+    }
+
+    document.getElementById('reset-button').addEventListener('click', () => {
+        if (confirm('¿Poner a todos los jugadores en "Pendiente" para esta semana?')) {
+            const updates = {};
+            database.ref('jugadores').once('value', (snapshot) => {
+                const jugadores = snapshot.val();
+                jugadores.forEach((player, index) => {
+                    updates[`jugadores/${index}/status`] = 'pendiente';
+                });
+                database.ref().update(updates);
+            });
+        }
+    });
+
+    function iniciarApp(jugadores, matchDate) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', options)}`;
+        inicializarTabla(jugadores);
+        calcularNecesidad(jugadores, matchDate);
+    }
+    
+    function inicializarTabla(jugadores) {
+        tablaBody.innerHTML = '';
+        jugadores.forEach((jugador, index) => {
+            const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
+            const fila = document.createElement('tr');
+            fila.dataset.index = index;
+            const status = jugador.status || 'pendiente';
+
+            fila.innerHTML = `
+                <td>${jugador.nombre}</td>
+                <td>
+                    <div class="status-radio">
+                        <label><input type="radio" name="status-${index}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
+                        <label><input type="radio" name="status-${index}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
+                        <label><input type="radio" name="status-${index}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''}> Pendiente</label>
+                    </div>
+                </td>
+                <td class="admin-only"><input type="number" class="jugados" value="${jugador.jugados || 0}" min="0"></td>
+                <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0"></td>
+                <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0"></td>
+                <td class="fiabilidad">${fiabilidad}</td>
+            `;
+            tablaBody.appendChild(fila);
+        });
+
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const fila = e.target.closest('tr');
+                const index = fila.dataset.index;
+                const jugados = parseInt(fila.querySelector('.jugados').value);
+                const total = parseInt(fila.querySelector('.total').value);
+                const status = fila.querySelector('input[type="radio"]:checked').value;
+                const bajas = parseInt(fila.querySelector('.bajas').value);
+
+                database.ref(`jugadores/${index}`).update({ jugados, total, status, bajas });
+            });
+        });
+    }
+
+    function calcularNecesidad(jugadores, matchDate) {
+        const JUGADORES_NECESARIOS = 10;
+        let confirmados = 0, proyeccionPendientes = 0, pendientesCount = 0;
+        const listaApuntados = [];
+
+        const ahora = new Date();
+        const horasRestantes = (matchDate - ahora) / 36e5;
+        
+        // --- Algoritmo de probabilidad más agresivo ---
+        let factorConfianza = 0.1; // Por defecto (Miércoles)
+        if (horasRestantes > 72) factorConfianza = 0.8; // Domingo y antes
+        else if (horasRestantes > 48) factorConfianza = 0.6; // Lunes
+        else if (horasRestantes > 25) factorConfianza = 0.3; // Martes hasta las 14h
+
+        jugadores.forEach(jugador => {
+            if (jugador.status === 'si') {
+                confirmados++;
+                listaApuntados.push(jugador.nombre);
+            } else if (jugador.status === 'pendiente') {
+                const fiabilidad = jugador.total > 0 ? (jugador.jugados - (jugador.bajas || 0) * 0.5) / jugador.total : 0; // Penalización por baja
+                proyeccionPendientes += Math.max(0, fiabilidad); // Evitar fiabilidad negativa
+                pendientesCount++;
+            }
+        });
+        
+        const proyeccionAjustada = confirmados + (proyeccionPendientes * factorConfianza);
+        let probabilidad = (proyeccionAjustada / JUGADORES_NECESARIOS) * 100;
+        
+        // --- Ajuste de probabilidad: nunca 100% si no están los 10 ---
+        if (confirmados < JUGADORES_NECESARIOS) {
+            probabilidad = Math.min(99, probabilidad);
+        } else {
+            probabilidad = 100;
+        }
+
+        const resultadoDiv = document.getElementById('resultado');
+        let recomendacion = "", claseColor = "";
+        let alertaBajas = "";
+
+        // --- Lógica especial del Martes a las 14:00 ---
+        const esMartes = matchDate.getDay() === 3 && (horasRestantes > 24 && horasRestantes < 31);
+        if (esMartes && ahora.getHours() >= 14 && confirmados < 10) {
+            const jugadoresSiConBajas = jugadores.filter(j => j.status === 'si' && (j.bajas || 0) > 0).length;
+            const faltan = JUGADORES_NECESARIOS - confirmados;
+            
+            if (jugadoresSiConBajas > 0 && jugadoresSiConBajas >= faltan) {
+                alertaBajas = `<br><strong>¡OJO! Hay ${jugadoresSiConBajas} apuntados con historial de bajas. Recomienda que confirmen de nuevo.</strong>`;
+            }
+
+            if(faltan > 0){
+                recomendacion = `🔥 ¡FECHA LÍMITE! Faltan ${faltan}. Recomienda buscar gente fuera AHORA.`;
+                claseColor = "rojo";
+            }
+        }
+        
+        if (!recomendacion) { // Si no es la alerta del martes, calcular normal
+            if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado! Todo va sobre ruedas."; }
+            else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que seguir atentos a los pendientes."; }
+            else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa. Anima a los indecisos."; }
+            else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Hay pocas probabilidades. Empieza a buscar gente fuera YA."; }
+        }
+
+        if (confirmados >= 10) {
+            claseColor = "verde";
+            recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${confirmados}.`;
+        }
+
+        const listaHtml = listaApuntados.length > 0 ? `<strong>Apuntados:</strong><div class="lista-apuntados">${listaApuntados.join('<br>')}</div>` : '<strong>Nadie apuntado todavía.</strong>';
+
+        resultadoDiv.className = 'resultado ' + claseColor;
+        resultadoDiv.innerHTML = `
+            <p class="probabilidad">${probabilidad.toFixed(0)}%</p>
+            <p style="margin: -10px 0 10px 0; opacity: 0.8;">de probabilidad de llegar a 10</p>
+            <p class="recomendacion">${recomendacion}${alertaBajas}</p>
+            <div class="resumen">${listaHtml}</div>
+        `;
+    }
+
+    function getNextWednesday() {
+        const d = new Date();
+        d.setDate(d.getDate() + (3 + 7 - d.getDay()) % 7);
+        d.setHours(21, 0, 0, 0);
+        if (new Date() > d) { // Si ya ha pasado el miércoles de esta semana
+            d.setDate(d.getDate() + 7);
+        }
+        return d;
+    }
+});
+</script>
+
+</body>
+</html>
