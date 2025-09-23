@@ -64,7 +64,7 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
         } else if (pass) { alert('Contraseña incorrecta.'); }
     }
-    renderUI(); // <<-- Llamada a la función de renderizado unificada
+    renderUI();
 });
 
 document.getElementById('player-login').addEventListener('click', () => {
@@ -81,23 +81,22 @@ document.getElementById('player-login').addEventListener('click', () => {
     } else {
         alert('Código de acceso no reconocido.');
     }
-    renderUI(); // <<-- Llamada a la función de renderizado unificada
+    renderUI();
 });
 
 // --- FUNCIÓN DE RENDERIZADO UNIFICADA ---
 function renderUI() {
     if (!currentDbData || !currentDbData.jugadores) {
-        document.getElementById('main-content').style.display = 'none';
-        return;
+        return; // No hacer nada si los datos básicos no están
     }
     document.getElementById('main-content').style.display = 'block';
     
-    // 1. Dibuja el cuadro de resumen (lógica de calcularNecesidad)
+    // 1. Dibuja el cuadro de resumen
     calcularYMostrarResumen();
 
-    // 2. Dibuja la tabla (lógica de inicializarTabla)
+    // 2. Dibuja la tabla
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
-    tablaBody.innerHTML = ''; // Limpiar siempre antes de dibujar
+    tablaBody.innerHTML = '';
     currentDbData.jugadores.forEach((jugador, index) => {
         const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
         const fila = document.createElement('tr');
@@ -120,9 +119,9 @@ function renderUI() {
         tablaBody.appendChild(fila);
     });
 
-    // 3. Aplica la visibilidad y permisos (lógica de actualizarVista)
+    // 3. Aplica visibilidad y permisos
     const tablaJugadores = document.getElementById('tabla-jugadores');
-    tablaJugadores.style.display = (isAdmin || loggedInPlayer) ? '' : 'none'; // Usar '' para respetar CSS
+    tablaJugadores.style.display = (isAdmin || loggedInPlayer) ? '' : 'none';
     document.body.classList.toggle('admin-view', isAdmin);
 
     document.querySelectorAll('#tabla-jugadores tbody tr').forEach((fila) => {
@@ -149,10 +148,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Escucha principal de la base de datos
     database.ref().on('value', (snapshot) => {
         currentDbData = snapshot.val();
-        checkForAutoReset(); // Esta función decidirá si renderizar o resetear
+        checkForAutoReset();
     });
 
     async function checkForAutoReset() {
+        // CORRECCIÓN: Añadimos una guarda para evitar error si los datos aún no han llegado
+        if (!currentDbData || !currentDbData.jugadores) {
+            return;
+        }
+
         const ahora = new Date();
         const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
         const resetTime = new Date(nextMatchDate);
@@ -167,13 +171,11 @@ document.addEventListener('DOMContentLoaded', function() {
             updates['matchInfo/nextMatchDate'] = newMatchDate.toISOString();
             updates['refuerzos'] = null;
             await database.ref().update(updates);
-            // El listener de `on.value` se encargará de re-renderizar con los datos nuevos
         } else {
-            renderUI(); // <<-- Renderiza la UI con los datos actuales
+            renderUI();
         }
     }
     
-    // Listener para guardar cambios en la BD
     document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
         if(!e.target.closest('tr')) return;
         const fila = e.target.closest('tr');
@@ -188,14 +190,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function calcularYMostrarResumen() {
-        if (!currentDbData || !currentDbData.jugadores) return;
+        const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
 
-        const jugadores = currentDbData.jugadores;
-        const refuerzos = currentDbData.refuerzos;
-        const matchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
-
-        const options = { weekday: 'long', month: 'long', day: 'numeric' };
-        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', options)}`;
+        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
         const JUGADORES_NECESARIOS = 10;
         let confirmados = 0, proyeccionPendientes = 0;
@@ -257,13 +255,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getNextWednesday() {
         const d = new Date();
-        d.setDate(d.getDate() + (3 + 7 - d.getDay()) % 7);
+        const today = d.getDay();
+        const offset = (3 - today + 7) % 7;
+        d.setDate(d.getDate() + offset);
         d.setHours(21, 0, 0, 0);
-        if (new Date() > d) { d.setDate(d.getDate() + 7); }
+        if (offset === 0 && new Date() > d) {
+            d.setDate(d.getDate() + 7);
+        }
         return d;
     }
     
-    // --- BOTONES DE ACCIÓN ---
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
