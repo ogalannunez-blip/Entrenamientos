@@ -190,7 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let factorConfianza = 0.1; // Por defecto (Miércoles)
         if (horasRestantes > 72) factorConfianza = 0.8; // Domingo y antes
         else if (horasRestantes > 48) factorConfianza = 0.6; // Lunes
-        else if (horasRestantes > 25) factorConfianza = 0.3; // Martes hasta las 14h
+        else if (horasRestantes > 31) factorConfianza = 0.3; // Martes hasta las 14h
+        else factorConfianza = 0.15; // Martes después de las 14h
 
         jugadores.forEach(jugador => {
             if (jugador.status === 'si') {
@@ -218,10 +219,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let alertaBajas = "";
 
         // --- Lógica especial del Martes a las 14:00 ---
-        const esMartes = matchDate.getDay() === 3 && (horasRestantes > 24 && horasRestantes < 31);
-        if (esMartes && ahora.getHours() >= 14 && confirmados < 10) {
+        // CORRECTED LOGIC: Check if "ahora" is Tuesday and after 14:00
+        const esMartesTarde = ahora.getDay() === 2 && ahora.getHours() >= 14; 
+        const faltan = JUGADORES_NECESARIOS - confirmados;
+
+        if (esMartesTarde && confirmados < 10) {
             const jugadoresSiConBajas = jugadores.filter(j => j.status === 'si' && (j.bajas || 0) > 0).length;
-            const faltan = JUGADORES_NECESARIOS - confirmados;
             
             if (jugadoresSiConBajas > 0 && jugadoresSiConBajas >= faltan) {
                 alertaBajas = `<br><strong>¡OJO! Hay ${jugadoresSiConBajas} apuntados con historial de bajas. Recomienda que confirmen de nuevo.</strong>`;
