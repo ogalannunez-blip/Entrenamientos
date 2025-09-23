@@ -13,18 +13,16 @@
 <div class="container">
     <h1><span id="admin-lock">🔓</span> Gestor de Partido <span id="player-login">👤</span></h1>
     <div id="login-info">Identifícate para responder</div>
-    <h2 id="match-date-title"></h2>
+    <h2 id="match-date-title">Cargando...</h2>
 
-    <div id="main-content">
+    <div id="main-content" style="display: none;">
         <button id="reset-button" class="reset-button admin-only admin-button" style="display:none">Resetear Asistencia</button>
         <div id="resultado"></div>
-        
         <div id="refuerzos-section">
             <h4>Añadir Refuerzos</h4>
             <input type="text" id="refuerzo-nombre" placeholder="Nombre del refuerzo...">
             <button id="add-refuerzo-btn">Añadir</button>
         </div>
-        
         <table id="tabla-jugadores">
             <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Jugados</th><th class="admin-only">Total</th><th class="admin-only">Bajas</th><th>Fiabilidad</th></tr></thead>
             <tbody></tbody>
@@ -49,7 +47,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
-let adminPassword = "", isAdmin = false, loggedInPlayer = null, fullPlayerList = [];
+let adminPassword = "", isAdmin = false, loggedInPlayer = null;
+let currentDbData = {}; // Guardar el estado actual de la BD
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
@@ -61,7 +60,6 @@ document.getElementById('admin-lock').addEventListener('click', () => {
         document.body.classList.remove('admin-view');
         document.getElementById('admin-lock').textContent = '🔓';
         document.getElementById('login-info').textContent = 'Identifícate para responder';
-        iniciarApp({jugadores: fullPlayerList, refuerzos: fullPlayerList.refuerzos}, new Date(document.getElementById('match-date-title').dataset.date));
     } else {
         const pass = prompt('Introduce la contraseña de administrador:');
         if (pass === adminPassword) {
@@ -70,76 +68,84 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             document.body.classList.add('admin-view');
             document.getElementById('admin-lock').textContent = '🔒';
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
-            iniciarApp({jugadores: fullPlayerList, refuerzos: fullPlayerList.refuerzos}, new Date(document.getElementById('match-date-title').dataset.date));
-        } else if(pass) {
+        } else if (pass) {
             alert('Contraseña incorrecta.');
         }
     }
+    renderApp(currentDbData); // Vuelve a dibujar la app con el nuevo estado de sesión
 });
 
 document.getElementById('player-login').addEventListener('click', () => {
-    const playerNames = fullPlayerList.map((p, i) => `${i + 1}: ${p.nombre}`).join('\n');
+    if (!currentDbData.jugadores) return;
+    const playerNames = currentDbData.jugadores.map((p, i) => `${i + 1}: ${p.nombre}`).join('\n');
     const playerIndexInput = prompt(`Introduce tu número de jugador:\n${playerNames}`);
     const playerIndex = parseInt(playerIndexInput) - 1;
 
-    if (isNaN(playerIndex) || playerIndex < 0 || playerIndex >= fullPlayerList.length) {
+    if (isNaN(playerIndex) || playerIndex < 0 || playerIndex >= currentDbData.jugadores.length) {
         if(playerIndexInput) alert("Número de jugador no válido.");
         return;
     }
 
-    const playerPassword = prompt(`Hola ${fullPlayerList[playerIndex].nombre}, introduce tu contraseña:`);
-    if (playerPassword === fullPlayerList[playerIndex].password) {
-        loggedInPlayer = {...fullPlayerList[playerIndex], index: playerIndex};
+    const playerPassword = prompt(`Hola ${currentDbData.jugadores[playerIndex].nombre}, introduce tu contraseña:`);
+    if (playerPassword === currentDbData.jugadores[playerIndex].password) {
+        loggedInPlayer = {...currentDbData.jugadores[playerIndex], index: playerIndex};
         isAdmin = false;
-        
         document.body.classList.remove('admin-view');
         document.getElementById('admin-lock').textContent = '🔓';
-        document.getElementById('login-info').textContent = `Sesión iniciada como: ${fullPlayerList[playerIndex].nombre}`;
-        
-        iniciarApp({jugadores: fullPlayerList, refuerzos: fullPlayerList.refuerzos}, new Date(document.getElementById('match-date-title').dataset.date));
+        document.getElementById('login-info').textContent = `Sesión iniciada como: ${currentDbData.jugadores[playerIndex].nombre}`;
     } else if(playerPassword) {
         alert('Contraseña incorrecta.');
     }
+    renderApp(currentDbData); // Vuelve a dibujar la app con el nuevo estado de sesión
 });
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    const mainContent = document.getElementById('main-content');
-    
+    // Escucha principal de la base de datos
     database.ref().on('value', (snapshot) => {
-        const dbData = snapshot.val();
-        if (dbData && dbData.jugadores) {
-            mainContent.style.display = 'block';
-            fullPlayerList = dbData.jugadores;
-            fullPlayerList.refuerzos = dbData.refuerzos;
-            checkForAutoReset(dbData);
+        currentDbData = snapshot.val();
+        if (currentDbData && currentDbData.jugadores) {
+            document.getElementById('main-content').style.display = 'block';
+            checkForAutoReset();
         }
     });
 
-    async function checkForAutoReset(dbData) {
+    async function checkForAutoReset() {
         const ahora = new Date();
-        let nextMatchDate = dbData.matchInfo ? new Date(dbData.matchInfo.nextMatchDate) : getNextWednesday();
+        let nextMatchDate = currentDbData.matchInfo ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
         const resetTime = new Date(nextMatchDate);
         resetTime.setHours(22, 0, 0, 0);
 
         if (ahora > resetTime) {
             const newMatchDate = getNextWednesday();
             const updates = {};
-            dbData.jugadores.forEach((player, index) => {
+            currentDbData.jugadores.forEach((player, index) => {
                 updates[`jugadores/${index}/status`] = 'pendiente';
             });
             updates['matchInfo/nextMatchDate'] = newMatchDate.toISOString();
             updates['refuerzos'] = null;
             await database.ref().update(updates);
         } else {
-            iniciarApp(dbData, nextMatchDate);
+            renderApp(currentDbData);
         }
+    }
+
+    function renderApp(dbData) {
+        const jugadores = dbData.jugadores || [];
+        const refuerzos = dbData.refuerzos || {};
+        const matchDate = dbData.matchInfo ? new Date(dbData.matchInfo.nextMatchDate) : getNextWednesday();
+        
+        const options = { weekday: 'long', month: 'long', day: 'numeric' };
+        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', options)}`;
+        
+        inicializarTabla(jugadores);
+        calcularNecesidad(jugadores, refuerzos, matchDate);
     }
     
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
-            fullPlayerList.forEach((player, index) => {
+            currentDbData.jugadores.forEach((player, index) => {
                 updates[`jugadores/${index}/status`] = 'pendiente';
             });
             database.ref().update(updates);
@@ -150,25 +156,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
             const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
-            const newRefuerzo = { nombre: nombreRefuerzo, anadidoPor };
-            database.ref('refuerzos').push(newRefuerzo);
+            database.ref('refuerzos').push({ nombre: nombreRefuerzo, anadidoPor });
             document.getElementById('refuerzo-nombre').value = '';
         } else {
             alert("Debes identificarte primero para añadir un refuerzo.");
         }
     });
-
-    function iniciarApp(dbData, matchDate) {
-        const jugadores = dbData.jugadores;
-        const refuerzos = dbData.refuerzos || {};
-        const options = { weekday: 'long', month: 'long', day: 'numeric' };
-        const titleEl = document.getElementById('match-date-title');
-        titleEl.textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', options)}`;
-        titleEl.dataset.date = matchDate.toISOString();
-        
-        inicializarTabla(jugadores);
-        calcularNecesidad(jugadores, refuerzos, matchDate);
-    }
     
     function inicializarTabla(jugadores) {
         const tablaBody = document.querySelector("#tabla-jugadores tbody");
@@ -201,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', (e) => {
+                if(!e.target.closest('tr')) return;
                 const fila = e.target.closest('tr');
                 const index = fila.dataset.index;
                 const updateData = {
@@ -215,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function calcularNecesidad(jugadores, refuerzos, matchDate) {
+        // Esta función no ha cambiado, es la misma que la anterior
         const JUGADORES_NECESARIOS = 10;
         let confirmados = 0, proyeccionPendientes = 0, pendientesCount = 0;
         const listaApuntados = [], listaRefuerzos = Object.values(refuerzos || {}).map(r => r.nombre);
