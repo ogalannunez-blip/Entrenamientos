@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;max-height:120px;overflow-y:auto;}.lista-apuntados li{display:flex;justify-content:space-between;align-items:center;padding:2px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block !important;}}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;max-height:120px;overflow-y:auto;}.lista-apuntados li{display:flex;justify-content:space-between;align-items:center;padding:2px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:8px;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}@media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block !important;}}
     </style>
 </head>
 <body>
@@ -43,7 +43,7 @@ const firebaseConfig = {
   messagingSenderId: "322454738753",
   appId: "G-SGS7EYBFTZ"
 };
-
+    
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "", isAdmin = false, loggedInPlayer = null;
@@ -65,7 +65,7 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
         } else if (pass) { alert('Contraseña incorrecta.'); }
     }
-    renderApp(currentDbData); // Vuelve a dibujar la app con el nuevo estado de sesión
+    renderApp(currentDbData);
 });
 
 document.getElementById('player-login').addEventListener('click', () => {
@@ -90,12 +90,10 @@ document.getElementById('player-login').addEventListener('click', () => {
     } else {
         alert('Código de acceso no reconocido.');
     }
-    renderApp(currentDbData); // Vuelve a dibujar la app con el nuevo estado de sesión
+    renderApp(currentDbData);
 });
 
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Escucha principal de la base de datos
     database.ref().on('value', (snapshot) => {
         currentDbData = snapshot.val();
         if (currentDbData && currentDbData.jugadores) {
@@ -104,12 +102,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    async function checkForAutoReset() { /* ... sin cambios ... */ }
+    async function checkForAutoReset() {
+        const ahora = new Date();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const resetTime = new Date(nextMatchDate);
+        resetTime.setHours(22, 0, 0, 0);
+
+        if (ahora > resetTime) {
+            const newMatchDate = getNextWednesday();
+            const updates = {};
+            currentDbData.jugadores.forEach((player, index) => {
+                updates[`jugadores/${index}/status`] = 'pendiente';
+            });
+            updates['matchInfo/nextMatchDate'] = newMatchDate.toISOString();
+            updates['refuerzos'] = null;
+            await database.ref().update(updates);
+        } else {
+            renderApp(currentDbData);
+        }
+    }
     
     function renderApp(dbData) {
         const jugadores = dbData.jugadores || [];
         const refuerzos = dbData.refuerzos || {};
         const matchDate = (dbData.matchInfo && dbData.matchInfo.nextMatchDate) ? new Date(dbData.matchInfo.nextMatchDate) : getNextWednesday();
+        
+        document.body.classList.toggle('admin-view', isAdmin);
         
         const options = { weekday: 'long', month: 'long', day: 'numeric' };
         document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', options)}`;
@@ -121,7 +139,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('reset-button').addEventListener('click', () => { /* ... sin cambios ... */ });
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => { /* ... sin cambios ... */ });
     
-    // Listener para borrar refuerzos
     document.querySelector('#resultado').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-refuerzo')) {
             const refKey = e.target.dataset.key;
@@ -141,16 +158,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const tablaBody = document.querySelector("#tabla-jugadores tbody");
         tablaBody.innerHTML = '';
         jugadores.forEach((jugador, index) => {
-             // Si es un jugador logueado (no admin), solo muestra su fila
             if (loggedInPlayer && !isAdmin && loggedInPlayer.index !== index) {
-                return; // Salta al siguiente jugador
+                return;
             }
 
             const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
             const fila = document.createElement('tr');
             fila.dataset.index = index;
             const status = jugador.status || 'pendiente';
-            
             const isPlayerRowEditable = (loggedInPlayer && loggedInPlayer.index === index);
 
             fila.innerHTML = `
@@ -171,13 +186,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('change', (e) => { /* ... sin cambios ... */ });
+            input.addEventListener('change', (e) => {
+                if(!e.target.closest('tr')) return;
+                const fila = e.target.closest('tr');
+                const index = fila.dataset.index;
+                const updateData = {
+                    jugados: parseInt(fila.querySelector('.jugados').value),
+                    total: parseInt(fila.querySelector('.total').value),
+                    status: fila.querySelector('input[type="radio"]:checked').value,
+                    bajas: parseInt(fila.querySelector('.bajas').value)
+                };
+                database.ref(`jugadores/${index}`).update(updateData);
+            });
         });
     }
 
     function calcularNecesidad(jugadores, refuerzos, matchDate) {
         const JUGADORES_NECESARIOS = 10;
-        let confirmados = 0, pendientesCount = 0;
+        let confirmados = 0, proyeccionPendientes = 0, pendientesCount = 0;
         const listaApuntados = [];
         const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
         const numRefuerzos = listaRefuerzos.length;
@@ -194,21 +220,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalConfirmados = confirmados + numRefuerzos;
         const resultadoDiv = document.getElementById('resultado');
 
-        // ... (el resto de la función `calcularNecesidad` no necesita cambios lógicos)
-        // ... (pegando el resto de la función `calcularNecesidad` para asegurar que está completa)
-
+        // Re-pego la lógica de cálculo completa para asegurar que está todo.
         if (pendientesCount === 0 && totalConfirmados < JUGADORES_NECESARIOS) {
             resultadoDiv.className = 'resultado rojo';
-            let refuerzosHtml = listaRefuerzos.map(([key, ref]) => { /* ... */ }).join('');
-            const listaHtmlContent = (listaApuntados.length + numRefuerzos > 0) ? `<strong>Apuntados (${totalConfirmados}):</strong><ul class="lista-apuntados">${listaApuntados.map(n => `<li>${n}</li>`).join('')}${refuerzosHtml}</ul>` : '<strong>Nadie apuntado todavía.</strong>';
+            let refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
+                const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
+                const deleteButton = puedeBorrar ? `<span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span>` : '';
+                return `<li><i>${ref.nombre} (Amigo de ${ref.anadidoPor}) (R)</i> ${deleteButton}</li>`;
+            }).join('');
+            const listaHtmlContent = `<strong>Apuntados (${totalConfirmados}):</strong><ul class="lista-apuntados">${listaApuntados.map(n => `<li>${n}</li>`).join('')}${refuerzosHtml}</ul>`;
             resultadoDiv.innerHTML = `<p class="probabilidad">${((totalConfirmados / JUGADORES_NECESARIOS) * 100).toFixed(0)}%</p><p class="recomendacion">No se llega a 10. ¡Hay que buscar ${JUGADORES_NECESARIOS - totalConfirmados} refuerzo(s)!</p><div class="resumen">${listaHtmlContent}</div>`;
-             document.getElementById('refuerzos-section').style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
+            document.getElementById('refuerzos-section').style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
             return;
         }
         
         const ahora = new Date();
         const horasRestantes = (matchDate - ahora) / 36e5;
-        let factorConfianza = 0.1, proyeccionPendientes = 0;
+        let factorConfianza = 0.1;
         if (horasRestantes > 72) factorConfianza = 0.8; else if (horasRestantes > 48) factorConfianza = 0.6; else if (horasRestantes > 31) factorConfianza = 0.3; else factorConfianza = 0.15;
         
         jugadores.forEach(jugador => {
@@ -263,7 +291,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // El resto de funciones auxiliares
-    function getNextWednesday() { /* ... sin cambios ... */ }
+    function getNextWednesday() {
+        const d = new Date();
+        const today = d.getDay();
+        const offset = (today <= 3) ? (3 - today) : (10 - today);
+        d.setDate(d.getDate() + offset);
+        d.setHours(21, 0, 0, 0);
+        if (new Date() > d) { d.setDate(d.getDate() + 7); }
+        return d;
+    }
     async function checkForAutoReset() {
         const ahora = new Date();
         const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
@@ -283,20 +319,6 @@ document.addEventListener('DOMContentLoaded', function() {
             renderApp(currentDbData);
         }
     }
-    document.querySelectorAll('input').forEach(input => {
-        input.addEventListener('change', (e) => {
-            if(!e.target.closest('tr')) return;
-            const fila = e.target.closest('tr');
-            const index = fila.dataset.index;
-            const updateData = {
-                jugados: parseInt(fila.querySelector('.jugados').value),
-                total: parseInt(fila.querySelector('.total').value),
-                status: fila.querySelector('input[type="radio"]:checked').value,
-                bajas: parseInt(fila.querySelector('.bajas').value)
-            };
-            database.ref(`jugadores/${index}`).update(updateData);
-        });
-    });
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
@@ -316,16 +338,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert("Debes identificarte primero para añadir un refuerzo.");
         }
     });
-    function getNextWednesday() {
-        const d = new Date();
-        const today = d.getDay();
-        const offset = (today <= 3) ? (3 - today) : (10 - today);
-        d.setDate(d.getDate() + offset);
-        d.setHours(21, 0, 0, 0);
-        if (new Date() > d) { d.setDate(d.getDate() + 7); }
-        return d;
-    }
-
 });
 </script>
 </body>
