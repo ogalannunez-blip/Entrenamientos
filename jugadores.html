@@ -62,7 +62,7 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 let adminPassword = "", isAdmin = false, loggedInPlayer = null;
 let currentDbData = null;
-let simulatedTime = null; // Para el modo test
+let simulatedTime = null;
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
@@ -229,23 +229,33 @@ function renderSummary() {
         }
     });
 
-    const totalConfirmados = confirmados + listaRefuerzos.length;
-    const ahora = getCurrentTime();
-    const horasRestantes = (matchDate - ahora) / 36e5;
-    let factorConfianza = (horasRestantes > 72) ? 0.8 : (horasRestantes > 48) ? 0.6 : (horasRestantes > 31) ? 0.3 : 0.15;
-    const proyeccionAjustada = totalConfirmados + (proyeccionPendientes * factorConfianza);
-    let probabilidad = totalConfirmados >= JUGADORES_NECESARIOS ? 100 : Math.min(99, (proyeccionAjustada / JUGADORES_NECESARIOS) * 100);
+    let probabilidad, recomendacion, claseColor;
+    const maximoPosible = jugadores.length - listaNo.length;
 
-    let recomendacion = "", claseColor = "";
-    if (totalConfirmados >= JUGADORES_NECESARIOS) {
-        claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
-    } else if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; }
-    else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
-    else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
-    else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
+    // --- LÓGICA CORREGIDA ---
+    if (maximoPosible < JUGADORES_NECESARIOS) {
+        probabilidad = 0;
+        claseColor = "rojo";
+        recomendacion = `¡Partido cancelado! Imposible llegar a ${JUGADORES_NECESARIOS}.`;
+    } else {
+        const totalConfirmados = confirmados + listaRefuerzos.length;
+        const ahora = getCurrentTime();
+        const horasRestantes = (matchDate - ahora) / 36e5;
+        let factorConfianza = (horasRestantes > 72) ? 0.8 : (horasRestantes > 48) ? 0.6 : (horasRestantes > 31) ? 0.3 : 0.15;
+        const proyeccionAjustada = totalConfirmados + (proyeccionPendientes * factorConfianza);
+        probabilidad = totalConfirmados >= JUGADORES_NECESARIOS ? 100 : Math.min(99, (proyeccionAjustada / JUGADORES_NECESARIOS) * 100);
+
+        if (totalConfirmados >= JUGADORES_NECESARIOS) {
+            claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
+        } else if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; }
+        else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
+        else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
+        else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
+    }
 
     document.getElementById('refuerzos-section').style.display = (claseColor !== 'verde' && (isAdmin || loggedInPlayer)) ? 'block' : 'none';
 
+    const totalConfirmadosFinal = confirmados + listaRefuerzos.length;
     const siHtml = listaSi.map(n => `<li><span class="status-icon icon-si">✔</span> ${n}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
@@ -258,7 +268,7 @@ function renderSummary() {
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
     resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p><p class="recomendacion">${recomendacion}</p>
-        <div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong>
+        <div class="resumen"><strong>Respuestas (${totalConfirmadosFinal} confirmados):</strong>
         <ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
 }
 
