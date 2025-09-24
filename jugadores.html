@@ -222,27 +222,20 @@ function renderSummary() {
     let probabilidad, recomendacion, claseColor;
     let showRefuerzosForce = false;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
+    const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
 
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
-    } else if (listaPendiente.length === 0 && totalConfirmados < JUGADORES_NECESARIOS) {
-        // Muestra el progreso real si todos han votado pero no se llega
+    } else if (maximoPosiblePlantilla < JUGADORES_NECESARIOS) {
         probabilidad = (totalConfirmados / JUGADORES_NECESARIOS) * 100;
         claseColor = "rojo";
         recomendacion = `¡Faltan ${JUGADORES_NECESARIOS - totalConfirmados}! Hay que buscar refuerzos.`;
         showRefuerzosForce = true;
     } else {
-        // --- INICIO DEL NUEVO ALGORITMO DE PROBABILIDAD (TU MODELO) ---
         const ahora = getCurrentTime();
-        const pesoJugador = 100 / jugadores.length; // ej: 100 / 17 = 5.88
-        let probabilidadCalculada = 0;
-
-        // Aportación de los confirmados (sin refuerzos para el cálculo de potencial)
-        probabilidadCalculada += listaSi.length * pesoJugador;
-
-        // Aportación de los pendientes
+        let proyeccionPendientes = 0;
         listaPendiente.forEach(jugador => {
             const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
             const factorFiabilidad = Math.max(0, fiabilidad);
@@ -264,13 +257,12 @@ function renderSummary() {
                     factorTiempo = 0.33;
                 }
             }
-            probabilidadCalculada += pesoJugador * factorFiabilidad * factorTiempo;
+            proyeccionPendientes += 1 * factorFiabilidad * factorTiempo;
         });
-        
-        // El resultado final es esta probabilidad calculada
-        probabilidad = probabilidadCalculada;
 
-        // Decaimiento final de última hora (Martes 14h -> Miércoles 21h)
+        const totalProyectado = totalConfirmados + proyeccionPendientes;
+        probabilidad = (totalProyectado / JUGADORES_NECESARIOS) * 100;
+
         const decayStart = new Date(matchDate);
         decayStart.setDate(decayStart.getDate() - 1);
         decayStart.setHours(14, 0, 0, 0);
@@ -286,23 +278,16 @@ function renderSummary() {
                 probabilidad = 0;
             }
         }
-        
-        // Determinar color y recomendación basado en el número de jugadores proyectados
-        const jugadoresProyectados = (probabilidad / 100) * jugadores.length;
-        const totalProyectadoFinal = totalConfirmados + (jugadoresProyectados - listaSi.length);
 
-        if (totalProyectadoFinal >= 9.9) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; }
-        else if (totalProyectadoFinal >= 7.0) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
-        else if (totalProyectadoFinal >= 4.0) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
+        if (probabilidad >= 99) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; probabilidad = 99;}
+        else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
+        else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
 
         if (finalDecayActive) {
             recomendacion += "<br><small>⚠️ ¡El tiempo se agota! La probabilidad disminuye cada hora.</small>";
         }
     }
-    
-    // Clamp final de la probabilidad para mostrar
-    probabilidad = Math.min(100, Math.max(0, probabilidad));
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
@@ -312,7 +297,7 @@ function renderSummary() {
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
-    } else if (totalConfirmados >= JUGADORES_NECESARIOS) {
+    } else if (totalConfirmados >= 10) {
         isRefuerzosOpen = false;
     } else if (loggedInPlayer) {
         const ahora = getCurrentTime();
