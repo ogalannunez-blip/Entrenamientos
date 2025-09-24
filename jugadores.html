@@ -17,7 +17,7 @@
 <body>
 
 <div class="container">
-    <h1><span id="admin-lock">🔓</span> Gestor de Partido <span id="player-login">👤</span></h1>
+    <h1><span id="admin-lock">🔓</span> Gestor de entrenamientos<span id="player-login">👤</span></h1>
     <div id="login-info">Identifícate para responder</div>
     <h2 id="match-date-title">Cargando...</h2>
 
@@ -297,8 +297,30 @@ function renderSummary() {
     if(hayJugadorConBajas) {
         recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
+    
+    // --- LÓGICA DE VISIBILIDAD DE REFUERZOS MODIFICADA ---
+    let isRefuerzosOpen = false;
+    if (isAdmin) {
+        isRefuerzosOpen = true;
+    } else if (loggedInPlayer) {
+        const ahora = getCurrentTime();
+        const tuesdayActivationTime = new Date(matchDate);
+        tuesdayActivationTime.setDate(tuesdayActivationTime.getDate() - 1);
+        tuesdayActivationTime.setHours(14, 0, 0, 0);
 
-    const isRefuerzosOpen = showRefuerzosForce || (claseColor !== 'verde' && (isAdmin || loggedInPlayer));
+        const mondayActivationTime = new Date(matchDate);
+        mondayActivationTime.setDate(mondayActivationTime.getDate() - 2);
+        mondayActivationTime.setHours(14, 0, 0, 0);
+
+        if (showRefuerzosForce) {
+            isRefuerzosOpen = true;
+        } else if (ahora >= tuesdayActivationTime) {
+            isRefuerzosOpen = true;
+        } else if (ahora >= mondayActivationTime && probabilidad <= 80) {
+            isRefuerzosOpen = true;
+        }
+    }
+
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
 
     if (isRefuerzosOpen && !showRefuerzosForce) {
@@ -346,7 +368,6 @@ function renderTable() {
 
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
-    // MODIFICACIÓN: Mostrar si es admin O si un jugador ha iniciado sesión
     testSection.style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
     if(isAdmin || loggedInPlayer) {
         const timeDisplay = document.getElementById('current-time-display');
