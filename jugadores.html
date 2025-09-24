@@ -17,7 +17,7 @@
 <body>
 
 <div class="container">
-    <h1><span id="admin-lock">🔓</span> Gestor de entrenamientos<span id="player-login">👤</span></h1>
+    <h1><span id="admin-lock">🔓</span> Gestor de Partido <span id="player-login">👤</span></h1>
     <div id="login-info">Identifícate para responder</div>
     <h2 id="match-date-title">Cargando...</h2>
 
@@ -221,17 +221,12 @@ function renderSummary() {
 
     let probabilidad, recomendacion, claseColor;
     let showRefuerzosForce = false;
-    const maximoPosible = jugadores.length - listaNo.length;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
-    } else if (maximoPosible < JUGADORES_NECESARIOS) {
-        probabilidad = 0;
-        claseColor = "rojo";
-        recomendacion = `¡Partido cancelado! Imposible llegar a ${JUGADORES_NECESARIOS}.`;
     } else if (listaPendiente.length === 0 && totalConfirmados < JUGADORES_NECESARIOS) {
         probabilidad = (totalConfirmados / JUGADORES_NECESARIOS) * 100;
         claseColor = "rojo";
@@ -298,7 +293,6 @@ function renderSummary() {
         recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
     
-    // --- LÓGICA DE VISIBILIDAD DE REFUERZOS MODIFICADA ---
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
