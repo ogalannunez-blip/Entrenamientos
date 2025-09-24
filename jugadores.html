@@ -1,3 +1,5 @@
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -224,7 +226,11 @@ function renderSummary() {
     const maximoPosible = jugadores.length - listaNo.length;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
-    if (maximoPosible < JUGADORES_NECESARIOS) {
+    if (totalConfirmados >= JUGADORES_NECESARIOS) {
+        probabilidad = 100;
+        claseColor = "verde";
+        recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
+    } else if (maximoPosible < JUGADORES_NECESARIOS) {
         probabilidad = 0;
         claseColor = "rojo";
         recomendacion = `¡Partido cancelado! Imposible llegar a ${JUGADORES_NECESARIOS}.`;
@@ -261,13 +267,12 @@ function renderSummary() {
         });
 
         const totalProyectado = totalConfirmados + proyeccionPendientes;
-        probabilidad = totalProyectado >= JUGADORES_NECESARIOS ? 100 : (totalProyectado / JUGADORES_NECESARIOS) * 100;
+        probabilidad = (totalProyectado / JUGADORES_NECESARIOS) * 100;
 
-        // --- INICIO DECAIMIENTO FINAL ---
-        const decayStart = new Date(matchDate); // Martes 14:00
+        const decayStart = new Date(matchDate);
         decayStart.setDate(decayStart.getDate() - 1);
         decayStart.setHours(14, 0, 0, 0);
-        const decayEnd = new Date(matchDate); // Miércoles 21:00
+        const decayEnd = new Date(matchDate);
 
         let finalDecayActive = false;
         if (ahora > decayStart) {
@@ -279,11 +284,8 @@ function renderSummary() {
                 probabilidad = 0;
             }
         }
-        // --- FIN DECAIMIENTO FINAL ---
 
-        if (totalConfirmados >= JUGADORES_NECESARIOS) {
-            claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
-        } else if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; }
+        if (probabilidad >= 99) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; probabilidad = 99;} // Cap at 99 for visual feedback
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
@@ -293,10 +295,15 @@ function renderSummary() {
         }
     }
 
+    const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
+    if(hayJugadorConBajas) {
+        recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
+    }
+
     const isRefuerzosOpen = showRefuerzosForce || (claseColor !== 'verde' && (isAdmin || loggedInPlayer));
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
 
-    if (isRefuerzosOpen) {
+    if (isRefuerzosOpen && !showRefuerzosForce) {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
@@ -366,15 +373,4 @@ function applyVisibility() {
 function getNextWednesday() {
     const d = getCurrentTime();
     const today = d.getDay();
-    const offset = (3 - today + 7) % 7;
-    const newDate = new Date(d);
-    newDate.setDate(d.getDate() + offset);
-    newDate.setHours(21, 0, 0, 0);
-    if (offset === 0 && d > newDate) {
-        newDate.setDate(newDate.getDate() + 7);
-    }
-    return newDate;
-}
-</script>
-</body>
-</html>
+    const offset = (3 - today + 7) % 7
