@@ -141,7 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
         database.ref(`jugadores/${index}`).update(updateData);
     });
 
-    // Listeners Modo Test
     document.getElementById('apply-test-date').addEventListener('click', () => {
         const dateValue = document.getElementById('test-date').value;
         simulatedTime = dateValue ? new Date(dateValue) : null;
@@ -153,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUI();
     });
 
-    // Resto de listeners
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
@@ -243,7 +241,7 @@ function renderSummary() {
             const factorFiabilidad = Math.max(0, fiabilidad);
 
             const mondayStart = new Date(matchDate);
-            mondayStart.setDate(mondayStart.getDate() - (mondayStart.getDay() + 6) % 7);
+            mondayStart.setDate(mondayStart.getDate() - 2);
             mondayStart.setHours(0, 0, 0, 0);
 
             const tuesdayEnd = new Date(mondayStart);
@@ -253,9 +251,7 @@ function renderSummary() {
             let factorTiempo = 1.0;
             if (ahora > mondayStart) {
                 if (ahora < tuesdayEnd) {
-                    const totalWindowMillis = tuesdayEnd - mondayStart;
-                    const elapsedMillis = ahora - mondayStart;
-                    const decay = (elapsedMillis / totalWindowMillis) * (1.0 - 0.33);
+                    const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
                     factorTiempo = 1.0 - decay;
                 } else {
                     factorTiempo = 0.33;
@@ -267,15 +263,42 @@ function renderSummary() {
         const totalProyectado = totalConfirmados + proyeccionPendientes;
         probabilidad = totalProyectado >= JUGADORES_NECESARIOS ? 100 : (totalProyectado / JUGADORES_NECESARIOS) * 100;
 
+        // --- INICIO DECAIMIENTO FINAL ---
+        const decayStart = new Date(matchDate); // Martes 14:00
+        decayStart.setDate(decayStart.getDate() - 1);
+        decayStart.setHours(14, 0, 0, 0);
+        const decayEnd = new Date(matchDate); // Miércoles 21:00
+
+        let finalDecayActive = false;
+        if (ahora > decayStart) {
+            if (ahora < decayEnd) {
+                const decayFactor = 1 - ( (ahora - decayStart) / (decayEnd - decayStart) );
+                probabilidad *= decayFactor;
+                finalDecayActive = true;
+            } else {
+                probabilidad = 0;
+            }
+        }
+        // --- FIN DECAIMIENTO FINAL ---
+
         if (totalConfirmados >= JUGADORES_NECESARIOS) {
             claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
         } else if (probabilidad >= 95) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
+
+        if (finalDecayActive) {
+            recomendacion += "<br><small>⚠️ ¡El tiempo se agota! La probabilidad disminuye cada hora.</small>";
+        }
     }
 
-    document.getElementById('refuerzos-section').style.display = (showRefuerzosForce || (claseColor !== 'verde' && (isAdmin || loggedInPlayer))) ? 'block' : 'none';
+    const isRefuerzosOpen = showRefuerzosForce || (claseColor !== 'verde' && (isAdmin || loggedInPlayer));
+    document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
+
+    if (isRefuerzosOpen) {
+        recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
+    }
 
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
