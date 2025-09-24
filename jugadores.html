@@ -235,7 +235,11 @@ function renderSummary() {
         showRefuerzosForce = true;
     } else {
         const ahora = getCurrentTime();
-        let proyeccionPendientes = 0;
+        const pesoJugador = 100 / jugadores.length;
+        let probabilidadCalculada = 0;
+
+        probabilidadCalculada += listaSi.length * pesoJugador;
+
         listaPendiente.forEach(jugador => {
             const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
             const factorFiabilidad = Math.max(0, fiabilidad);
@@ -257,37 +261,22 @@ function renderSummary() {
                     factorTiempo = 0.33;
                 }
             }
-            proyeccionPendientes += 1 * factorFiabilidad * factorTiempo;
+            probabilidadCalculada += pesoJugador * factorFiabilidad * factorTiempo;
         });
+        
+        probabilidad = probabilidadCalculada;
+        
+        const jugadoresProyectados = (probabilidad / 100) * jugadores.length;
+        const totalProyectadoFinal = totalConfirmados + (jugadoresProyectados - listaSi.length);
 
-        const totalProyectado = totalConfirmados + proyeccionPendientes;
-        probabilidad = (totalProyectado / JUGADORES_NECESARIOS) * 100;
-
-        const decayStart = new Date(matchDate);
-        decayStart.setDate(decayStart.getDate() - 1);
-        decayStart.setHours(14, 0, 0, 0);
-        const decayEnd = new Date(matchDate);
-
-        let finalDecayActive = false;
-        if (ahora > decayStart) {
-            if (ahora < decayEnd) {
-                const decayFactor = 1 - ( (ahora - decayStart) / (decayEnd - decayStart) );
-                probabilidad *= decayFactor;
-                finalDecayActive = true;
-            } else {
-                probabilidad = 0;
-            }
-        }
-
-        if (probabilidad >= 99) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; probabilidad = 99;}
-        else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
-        else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
+        if (totalProyectadoFinal >= JUGADORES_NECESARIOS) {
+             claseColor = "verde"; recomendacion = "¡Partido casi asegurado!";
+        } else if (totalProyectadoFinal >= 7.0) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
+        else if (totalProyectadoFinal >= 4.0) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
-
-        if (finalDecayActive) {
-            recomendacion += "<br><small>⚠️ ¡El tiempo se agota! La probabilidad disminuye cada hora.</small>";
-        }
     }
+    
+    probabilidad = Math.min(100, Math.max(0, probabilidad));
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
