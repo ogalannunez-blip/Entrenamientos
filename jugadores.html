@@ -210,6 +210,7 @@ function renderSummary() {
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
     const JUGADORES_NECESARIOS = 10;
+    const JUGADORES_MAXIMOS = 12; // Nuevo límite
     const listaSi = [], listaPendiente = [], listaNo = [];
     const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
 
@@ -296,6 +297,8 @@ function renderSummary() {
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
+    } else if (totalConfirmados >= JUGADORES_MAXIMOS) {
+        isRefuerzosOpen = false; // Nueva regla: si hay 12 o más, se oculta para jugadores.
     } else if (loggedInPlayer) {
         const ahora = getCurrentTime();
         const tuesdayActivationTime = new Date(matchDate);
