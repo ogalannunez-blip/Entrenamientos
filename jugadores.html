@@ -6,7 +6,6 @@
     <title>Gestor de Partido de Fútbol</title>
     <style>
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;}.lista-apuntados li{display:flex;align-items:center;padding:3px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:auto;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
-        /* --- ESTILOS PARA ICONOS --- */
         .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:1px solid rgba(0,0,0,.1);font-size:.9em}
         .icon-si{background-color:#28a745}
         .icon-pendiente{background-color:#ffc107;color:#333}
@@ -213,37 +212,60 @@ function renderSummary() {
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
     const JUGADORES_NECESARIOS = 10;
-    let confirmados = 0, proyeccionPendientes = 0;
     const listaSi = [], listaPendiente = [], listaNo = [];
     const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
 
     jugadores.forEach(j => {
-        if (j.status === 'si') {
-            confirmados++; listaSi.push(j.nombre);
-        } else if (j.status === 'no') {
-            listaNo.push(j.nombre);
-        } else {
-            const fiabilidad = j.total > 0 ? (j.jugados - (j.bajas || 0) * 0.5) / j.total : 0;
-            proyeccionPendientes += Math.max(0, fiabilidad);
-            listaPendiente.push(j.nombre);
-        }
+        if (j.status === 'si') listaSi.push(j);
+        else if (j.status === 'no') listaNo.push(j);
+        else listaPendiente.push(j);
     });
 
     let probabilidad, recomendacion, claseColor;
+    let showRefuerzosForce = false;
     const maximoPosible = jugadores.length - listaNo.length;
+    const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
-    // --- LÓGICA CORREGIDA ---
     if (maximoPosible < JUGADORES_NECESARIOS) {
         probabilidad = 0;
         claseColor = "rojo";
         recomendacion = `¡Partido cancelado! Imposible llegar a ${JUGADORES_NECESARIOS}.`;
+    } else if (listaPendiente.length === 0 && totalConfirmados < JUGADORES_NECESARIOS) {
+        probabilidad = (totalConfirmados / JUGADORES_NECESARIOS) * 100;
+        claseColor = "rojo";
+        recomendacion = `¡Faltan ${JUGADORES_NECESARIOS - totalConfirmados}! Hay que buscar refuerzos.`;
+        showRefuerzosForce = true;
     } else {
-        const totalConfirmados = confirmados + listaRefuerzos.length;
         const ahora = getCurrentTime();
-        const horasRestantes = (matchDate - ahora) / 36e5;
-        let factorConfianza = (horasRestantes > 72) ? 0.8 : (horasRestantes > 48) ? 0.6 : (horasRestantes > 31) ? 0.3 : 0.15;
-        const proyeccionAjustada = totalConfirmados + (proyeccionPendientes * factorConfianza);
-        probabilidad = totalConfirmados >= JUGADORES_NECESARIOS ? 100 : Math.min(99, (proyeccionAjustada / JUGADORES_NECESARIOS) * 100);
+        let proyeccionPendientes = 0;
+        listaPendiente.forEach(jugador => {
+            const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
+            const factorFiabilidad = Math.max(0, fiabilidad);
+
+            const mondayStart = new Date(matchDate);
+            mondayStart.setDate(mondayStart.getDate() - (mondayStart.getDay() + 6) % 7);
+            mondayStart.setHours(0, 0, 0, 0);
+
+            const tuesdayEnd = new Date(mondayStart);
+            tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+            tuesdayEnd.setHours(14, 0, 0, 0);
+
+            let factorTiempo = 1.0;
+            if (ahora > mondayStart) {
+                if (ahora < tuesdayEnd) {
+                    const totalWindowMillis = tuesdayEnd - mondayStart;
+                    const elapsedMillis = ahora - mondayStart;
+                    const decay = (elapsedMillis / totalWindowMillis) * (1.0 - 0.33);
+                    factorTiempo = 1.0 - decay;
+                } else {
+                    factorTiempo = 0.33;
+                }
+            }
+            proyeccionPendientes += 1 * factorFiabilidad * factorTiempo;
+        });
+
+        const totalProyectado = totalConfirmados + proyeccionPendientes;
+        probabilidad = totalProyectado >= JUGADORES_NECESARIOS ? 100 : (totalProyectado / JUGADORES_NECESARIOS) * 100;
 
         if (totalConfirmados >= JUGADORES_NECESARIOS) {
             claseColor = "verde"; recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
@@ -253,22 +275,21 @@ function renderSummary() {
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
     }
 
-    document.getElementById('refuerzos-section').style.display = (claseColor !== 'verde' && (isAdmin || loggedInPlayer)) ? 'block' : 'none';
+    document.getElementById('refuerzos-section').style.display = (showRefuerzosForce || (claseColor !== 'verde' && (isAdmin || loggedInPlayer))) ? 'block' : 'none';
 
-    const totalConfirmadosFinal = confirmados + listaRefuerzos.length;
-    const siHtml = listaSi.map(n => `<li><span class="status-icon icon-si">✔</span> ${n}</li>`).join('');
+    const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
         const delBtn = puedeBorrar ? `<span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span>` : '';
         return `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i> ${delBtn}</li>`;
     }).join('');
-    const pendienteHtml = listaPendiente.map(n => `<li><span class="status-icon icon-pendiente">?</span> ${n}</li>`).join('');
-    const noHtml = listaNo.map(n => `<li><span class="status-icon icon-no">✖</span> ${n}</li>`).join('');
+    const pendienteHtml = listaPendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span> ${j.nombre}</li>`).join('');
+    const noHtml = listaNo.map(j => `<li><span class="status-icon icon-no">✖</span> ${j.nombre}</li>`).join('');
 
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
     resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p><p class="recomendacion">${recomendacion}</p>
-        <div class="resumen"><strong>Respuestas (${totalConfirmadosFinal} confirmados):</strong>
+        <div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong>
         <ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
 }
 
@@ -276,7 +297,7 @@ function renderTable() {
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
     tablaBody.innerHTML = '';
     currentDbData.jugadores.forEach((jugador, index) => {
-        const fiabilidad = jugador.total > 0 ? (jugador.jugados / jugador.total * 100).toFixed(0) + '%' : '0%';
+        const fiabilidad = jugador.total > 0 ? ((jugador.jugados || 0) / jugador.total * 100).toFixed(0) + '%' : '0%';
         const status = jugador.status || 'pendiente';
         const fila = `
             <tr data-index="${index}">
