@@ -34,7 +34,7 @@
             <tbody></tbody>
         </table>
         <div id="admin-test-section" style="display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px;">
-            <h4 style="margin-top:0;">Modo Test (Admin)</h4>
+            <h4 style="margin-top:0;">Modo Test</h4>
             <label for="test-date">Simular Fecha y Hora:</label>
             <input type="datetime-local" id="test-date">
             <button id="apply-test-date">Aplicar</button>
@@ -283,7 +283,7 @@ function renderSummary() {
             }
         }
 
-        if (probabilidad >= 99) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; probabilidad = 99;} // Cap at 99 for visual feedback
+        if (probabilidad >= 99) { claseColor = "verde"; recomendacion = "¡Partido casi asegurado!"; probabilidad = 99;}
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
@@ -346,8 +346,9 @@ function renderTable() {
 
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
-    testSection.style.display = isAdmin ? 'block' : 'none';
-    if(isAdmin) {
+    // MODIFICACIÓN: Mostrar si es admin O si un jugador ha iniciado sesión
+    testSection.style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
+    if(isAdmin || loggedInPlayer) {
         const timeDisplay = document.getElementById('current-time-display');
         const now = getCurrentTime();
         timeDisplay.textContent = `Hora del sistema: ${now.toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })} ${simulatedTime ? '(SIMULADA)' : ''}`;
