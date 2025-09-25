@@ -5,13 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}.container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}h1,h2{text-align:center;color:#1a73e8}h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}th{background-color:#f2f2f2}input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}.status-radio{display:flex;gap:10px;justify-content:flex-start}.resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}.probabilidad{font-size:2.5em;font-weight:700;margin:0}.recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}.resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}.lista-apuntados{text-align:left;list-style:none;padding-left:0;}.lista-apuntados li{display:flex;align-items:center;padding:3px 0;}.delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:auto;}.delete-refuerzo:hover{opacity:1;}.verde{background-color:#28a745}.ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}.rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}.admin-only{display:none}.admin-view .admin-only{display:table-cell !important;}.admin-view .admin-button{display:block !important;}#admin-lock, #player-login{cursor:pointer;font-size:1.5em}#login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}#refuerzos-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
-        .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:1px solid rgba(0,0,0,.1);font-size:.9em}
+        /* Estilos generales del cuerpo y contenedor principal */
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
+        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+        
+        /* Estilos para títulos y encabezados */
+        h1,h2{text-align:center;color:#1a73e8}
+        h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
+        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}
+        
+        /* Estilos para la tabla de jugadores */
+        table{width:100%;border-collapse:collapse;margin-top:20px}
+        th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
+        th{background-color:#f2f2f2}
+        
+        /* Estilos para campos de entrada */
+        input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
+        input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}
+        
+        /* Estilos para los botones de estado (Sí/No/Pendiente) */
+        .status-radio{display:flex;gap:10px;justify-content:flex-start}
+        
+        /* Estilos del cuadro de resumen de probabilidad */
+        .resultado{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}
+        .probabilidad{font-size:2.5em;font-weight:700;margin:0}
+        .recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}
+        .resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}
+        .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
+        .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
+        
+        /* Icono para borrar refuerzos */
+        .delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:auto;}
+        .delete-refuerzo:hover{opacity:1;}
+        
+        /* Colores del cuadro de resumen */
+        .verde{background-color:#28a745}
+        .ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}
+        .rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}
+        
+        /* Clases para controlar la visibilidad del admin */
+        .admin-only{display:none}
+        .admin-view .admin-only{display:table-cell !important;}
+        .admin-view .admin-button{display:block !important;}
+        .admin-view #add-player-section{display:block !important;}
+
+        /* Iconos de login y candado */
+        #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
+        #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}
+        
+        /* Secciones de refuerzos y añadir jugador */
+        #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
+        
+        /* --- ESTILOS PARA ICONOS DE ESTADO --- */
+        .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:1px solid rgba(0,0,0,.1);font-size:.9em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
         .icon-si{background-color:#28a745}
         .icon-pendiente{background-color:#ffc107;color:#333}
         .icon-no{background-color:#dc3545}
+        
+        /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
-        @media screen and (max-width:600px){body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}.status-radio{justify-content:flex-end}input[type=number]{width:70px}.admin-view .admin-only{display:block !important;}}
+
+        /* --- ESTILOS PARA MÓVILES --- */
+        @media screen and (max-width:600px){
+            body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
+            table,thead,tbody,th,td,tr{display:block}
+            thead tr{position:absolute;top:-9999px;left:-9999px}
+            tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
+            td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
+            td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
+            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}
+            .status-radio{justify-content:flex-end}input[type=number]{width:70px}
+            .admin-view .admin-only{display:block !important;}
+        }
     </style>
 </head>
 <body>
@@ -23,16 +88,26 @@
 
     <div id="main-content" style="display: none;">
         <button id="reset-button" class="reset-button admin-only admin-button" style="display:none">Resetear Asistencia</button>
+        
         <div id="resultado"></div>
+        
         <div id="refuerzos-section">
             <h4>Añadir Refuerzos</h4>
             <input type="text" id="refuerzo-nombre" placeholder="Nombre del refuerzo...">
             <button id="add-refuerzo-btn">Añadir</button>
         </div>
+        
         <table id="tabla-jugadores">
             <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Jugados</th><th class="admin-only">Total</th><th class="admin-only">Bajas</th><th>Fiabilidad</th></tr></thead>
             <tbody></tbody>
         </table>
+
+        <div id="add-player-section" class="admin-only">
+            <h4>Añadir Nuevo Jugador a la Plantilla</h4>
+            <input type="text" id="new-player-name" placeholder="Nombre del nuevo jugador...">
+            <button id="add-player-btn">Añadir</button>
+        </div>
+
         <div id="admin-test-section" style="display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px;">
             <h4 style="margin-top:0;">Modo Test</h4>
             <label for="test-date">Simular Fecha y Hora:</label>
@@ -48,6 +123,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
+// --- CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyAeUfYINReyta5uNZd8sDCylju0nE7oy-A",
   authDomain: "entrenamientos-5f314.firebaseapp.com",
@@ -59,19 +135,26 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
-let adminPassword = "", isAdmin = false, loggedInPlayer = null;
+
+// --- VARIABLES GLOBALES DE ESTADO ---
+let adminPassword = "";
+let isAdmin = false;
+let loggedInPlayer = null;
 let currentDbData = null;
-let simulatedTime = null;
+let simulatedTime = null; // Para el modo test
 
 // --- LÓGICA DE LOGIN ---
+
+// Obtiene la contraseña de admin una sola vez al cargar
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
+// Evento para el login de administrador
 document.getElementById('admin-lock').addEventListener('click', () => {
-    if (isAdmin) {
+    if (isAdmin) { // Si ya es admin, cierra sesión
         isAdmin = false;
         loggedInPlayer = null;
         document.getElementById('login-info').textContent = 'Identifícate para responder';
-    } else {
+    } else { // Si no es admin, pide contraseña
         const pass = prompt('Introduce la contraseña de administrador:');
         if (pass === adminPassword) {
             isAdmin = true;
@@ -79,34 +162,39 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
         } else if (pass) { alert('Contraseña incorrecta.'); }
     }
-    renderUI();
+    renderUI(); // Actualiza la vista
 });
 
+// Evento para el login de jugador
 document.getElementById('player-login').addEventListener('click', () => {
     if (!currentDbData || !currentDbData.jugadores) return;
     const accessCode = prompt('Introduce tu código de acceso:');
     if (!accessCode) return;
     
     const playerIndex = currentDbData.jugadores.findIndex(p => p.password === accessCode);
-    if (playerIndex > -1) {
+    if (playerIndex > -1) { // Si se encuentra el jugador
         loggedInPlayer = {...currentDbData.jugadores[playerIndex], index: playerIndex};
         isAdmin = false;
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
     } else {
         alert('Código de acceso no reconocido.');
     }
-    renderUI();
+    renderUI(); // Actualiza la vista
 });
 
 
-// --- LÓGICA DE RENDERIZADO Y EVENTOS ---
+// --- LÓGICA PRINCIPAL Y EVENTOS ---
+
+// Se ejecuta cuando el HTML está completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
     
+    // Listener principal: se ejecuta cada vez que hay un cambio en la base de datos
     database.ref().on('value', async (snapshot) => {
         const data = snapshot.val();
         if (data && data.jugadores) {
             currentDbData = data;
             
+            // Comprueba si es hora de resetear automáticamente la asistencia (ej. después del partido)
             const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             const resetTime = new Date(nextMatchDate);
@@ -121,13 +209,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentDbData.jugadores.forEach((_, index) => {
                     updates[`jugadores/${index}/status`] = 'pendiente';
                 });
-                await database.ref().update(updates); 
+                await database.ref().update(updates); // Realiza el reseteo
             } else {
-                renderUI();
+                renderUI(); // Si no es hora de resetear, simplemente renderiza la interfaz
             }
         }
     });
 
+    // Listener para guardar cambios en la tabla (estado, jugados, etc.)
     document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
         const fila = e.target.closest('tr');
         if(!fila) return;
@@ -141,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         database.ref(`jugadores/${index}`).update(updateData);
     });
 
+    // Listeners del Modo Test
     document.getElementById('apply-test-date').addEventListener('click', () => {
         const dateValue = document.getElementById('test-date').value;
         simulatedTime = dateValue ? new Date(dateValue) : null;
@@ -152,6 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUI();
     });
 
+    // Listener del botón de reset manual (solo admin)
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
@@ -162,6 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Listener del botón para añadir refuerzos (amigos)
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
@@ -172,7 +264,39 @@ document.addEventListener('DOMContentLoaded', function() {
             alert("Debes identificarte para añadir un refuerzo.");
         }
     });
+    
+    // Listener para añadir un nuevo jugador a la plantilla (solo admin)
+    document.getElementById('add-player-btn').addEventListener('click', () => {
+        const newName = document.getElementById('new-player-name').value.trim();
+        if (!newName) {
+            alert("Por favor, introduce un nombre.");
+            return;
+        }
+        const newPassword = prompt(`Introduce la contraseña para ${newName}:`);
+        if (!newPassword) {
+            alert("La contraseña no puede estar vacía.");
+            return;
+        }
 
+        const newPlayer = {
+            nombre: newName,
+            password: newPassword,
+            status: "pendiente",
+            jugados: 0,
+            total: 0,
+            bajas: 0
+        };
+
+        const updatedPlayers = [...currentDbData.jugadores, newPlayer];
+        database.ref('jugadores').set(updatedPlayers)
+            .then(() => {
+                alert(`${newName} ha sido añadido a la plantilla.`);
+                document.getElementById('new-player-name').value = '';
+            })
+            .catch(error => alert("Error al añadir jugador: " + error.message));
+    });
+
+    // Listener para borrar refuerzos (amigos)
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-refuerzo')) {
             const refKey = e.target.dataset.key;
@@ -189,12 +313,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// --- FUNCIONES AUXILIARES ---
+// --- FUNCIONES DE RENDERIZADO Y CÁLCULO ---
 
+// Devuelve la hora actual o la simulada por el modo test
 function getCurrentTime() {
     return simulatedTime ? new Date(simulatedTime) : new Date();
 }
 
+// Función principal que llama a todas las demás para dibujar la interfaz
 function renderUI() {
     if (!currentDbData) return;
     document.getElementById('main-content').style.display = 'block';
@@ -204,6 +330,7 @@ function renderUI() {
     applyVisibility();
 }
 
+// Dibuja el cuadro de resumen con la probabilidad
 function renderSummary() {
     const { jugadores, refuerzos, matchInfo } = currentDbData;
     const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
@@ -222,67 +349,93 @@ function renderSummary() {
     let probabilidad, recomendacion, claseColor;
     let showRefuerzosForce = false;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
-    const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
-
+    
+    // --- INICIO DEL ALGORITMO DE PROBABILIDAD ---
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
-    } else if (maximoPosiblePlantilla < JUGADORES_NECESARIOS) {
-        probabilidad = (totalConfirmados / JUGADORES_NECESARIOS) * 100;
-        claseColor = "rojo";
-        recomendacion = `¡Faltan ${JUGADORES_NECESARIOS - totalConfirmados}! Hay que buscar refuerzos.`;
-        showRefuerzosForce = true;
     } else {
         const ahora = getCurrentTime();
-        const pesoJugador = 100 / jugadores.length;
-        let probabilidadCalculada = 0;
+        // El % restante a repartir entre los que no han dicho 'No'
+        let porcentajeRestante = 100 - (listaSi.length * 10);
+        // Jugadores que todavía pueden decir 'Sí' (los pendientes)
+        const jugadoresEnJuego = listaPendiente.length;
+        
+        let proyeccionPendientes = 0;
+        if (jugadoresEnJuego > 0) {
+            // El peso de cada jugador pendiente se calcula dinámicamente
+            const pesoDinamico = porcentajeRestante / jugadoresEnJuego;
+            listaPendiente.forEach(jugador => {
+                const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
+                const factorFiabilidad = Math.max(0, fiabilidad);
 
-        probabilidadCalculada += listaSi.length * pesoJugador;
+                // Cálculo del factor tiempo
+                const mondayStart = new Date(matchDate);
+                mondayStart.setDate(mondayStart.getDate() - 2);
+                mondayStart.setHours(0, 0, 0, 0);
 
-        listaPendiente.forEach(jugador => {
-            const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
-            const factorFiabilidad = Math.max(0, fiabilidad);
+                const tuesdayEnd = new Date(mondayStart);
+                tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+                tuesdayEnd.setHours(14, 0, 0, 0);
 
-            const mondayStart = new Date(matchDate);
-            mondayStart.setDate(mondayStart.getDate() - 2);
-            mondayStart.setHours(0, 0, 0, 0);
-
-            const tuesdayEnd = new Date(mondayStart);
-            tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
-            tuesdayEnd.setHours(14, 0, 0, 0);
-
-            let factorTiempo = 1.0;
-            if (ahora > mondayStart) {
-                if (ahora < tuesdayEnd) {
-                    const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
-                    factorTiempo = 1.0 - decay;
-                } else {
-                    factorTiempo = 0.33;
+                let factorTiempo = 1.0;
+                if (ahora > mondayStart) {
+                    if (ahora < tuesdayEnd) {
+                        const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
+                        factorTiempo = 1.0 - decay;
+                    } else {
+                        factorTiempo = 0.33;
+                    }
                 }
-            }
-            probabilidadCalculada += pesoJugador * factorFiabilidad * factorTiempo;
-        });
+                // Se suma la aportación ponderada de cada pendiente
+                proyeccionPendientes += pesoDinamico * factorFiabilidad * factorTiempo;
+            });
+        }
         
-        probabilidad = probabilidadCalculada;
-        
-        const jugadoresProyectados = (probabilidad / 100) * jugadores.length;
-        const totalProyectadoFinal = totalConfirmados + (jugadoresProyectados - listaSi.length);
+        // La probabilidad es la suma de los confirmados + la proyección de los pendientes
+        probabilidad = (listaSi.length * 10) + proyeccionPendientes;
+        // Los refuerzos suman un 10% directo cada uno, ya que no son parte de la plantilla original
+        probabilidad += listaRefuerzos.length * 10;
 
-        if (totalProyectadoFinal >= JUGADORES_NECESARIOS) {
-             claseColor = "verde"; recomendacion = "¡Partido casi asegurado!";
-        } else if (totalProyectadoFinal >= 7.0) { claseColor = "ambar"; recomendacion = "Buena pinta, pero hay que estar atentos."; }
-        else if (totalProyectadoFinal >= 4.0) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
+        // Decaimiento final de última hora (Martes 14h -> Miércoles 21h)
+        const decayStart = new Date(matchDate);
+        decayStart.setDate(decayStart.getDate() - 1);
+        decayStart.setHours(14, 0, 0, 0);
+        const decayEnd = new Date(matchDate);
+
+        let finalDecayActive = false;
+        if (ahora > decayStart) {
+            if (ahora < decayEnd) {
+                const decayFactor = 1 - ( (ahora - decayStart) / (decayEnd - decayStart) );
+                probabilidad *= decayFactor;
+                finalDecayActive = true;
+            } else {
+                probabilidad = 0;
+            }
+        }
+        
+        // Asignación de color y recomendación
+        if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
+        else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = ""; }
+        else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
         else { claseColor = "rojo"; recomendacion = "🔥 ¡Peligro! Conviene buscar gente."; }
+
+        if (finalDecayActive) {
+            recomendacion += "<br><small>⚠️ ¡El tiempo se agota! La probabilidad disminuye cada hora.</small>";
+        }
     }
     
+    // Clamp final para que la probabilidad no pase de 100 ni baje de 0
     probabilidad = Math.min(100, Math.max(0, probabilidad));
 
+    // Mensaje de aviso si hay jugadores con historial de bajas
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
-        recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
+        recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas.</small>';
     }
     
+    // Lógica para mostrar el cuadro de añadir refuerzos
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
@@ -313,6 +466,7 @@ function renderSummary() {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
+    // Renderizado final del HTML del cuadro de resumen
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
@@ -324,11 +478,12 @@ function renderSummary() {
 
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
-    resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p><p class="recomendacion">${recomendacion}</p>
+    resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">posibilidades de jugar</span></p><p class="recomendacion">${recomendacion}</p>
         <div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong>
         <ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
 }
 
+// Dibuja la tabla de jugadores
 function renderTable() {
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
     tablaBody.innerHTML = '';
@@ -352,6 +507,7 @@ function renderTable() {
     });
 }
 
+// Aplica las reglas de visibilidad según el estado de login
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
     testSection.style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
@@ -376,6 +532,7 @@ function applyVisibility() {
     });
 }
 
+// Calcula la fecha del próximo miércoles
 function getNextWednesday() {
     const d = getCurrentTime();
     const today = d.getDay();
