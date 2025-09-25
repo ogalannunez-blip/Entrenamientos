@@ -146,17 +146,14 @@ let currentDbData = null;
 let simulatedTime = null; // Para el modo test
 
 // --- LÓGICA DE LOGIN ---
-
-// Obtiene la contraseña de admin una sola vez al cargar
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
-// Evento para el login de administrador
 document.getElementById('admin-lock').addEventListener('click', () => {
-    if (isAdmin) { // Si ya es admin, cierra sesión
+    if (isAdmin) {
         isAdmin = false;
         loggedInPlayer = null;
         document.getElementById('login-info').textContent = 'Identifícate para responder';
-    } else { // Si no es admin, pide contraseña
+    } else {
         const pass = prompt('Introduce la contraseña de administrador:');
         if (pass === adminPassword) {
             isAdmin = true;
@@ -164,49 +161,38 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
         } else if (pass) { alert('Contraseña incorrecta.'); }
     }
-    renderUI(); // Actualiza la vista
+    renderUI();
 });
 
-// Evento para el login de jugador
 document.getElementById('player-login').addEventListener('click', () => {
     if (!currentDbData || !currentDbData.jugadores) return;
     const accessCode = prompt('Introduce tu código de acceso:');
     if (!accessCode) return;
-    
     const playerIndex = currentDbData.jugadores.findIndex(p => p.password === accessCode);
-    if (playerIndex > -1) { // Si se encuentra el jugador
+    if (playerIndex > -1) {
         loggedInPlayer = {...currentDbData.jugadores[playerIndex], index: playerIndex};
         isAdmin = false;
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
     } else {
         alert('Código de acceso no reconocido.');
     }
-    renderUI(); // Actualiza la vista
+    renderUI();
 });
 
 
 // --- LÓGICA PRINCIPAL Y EVENTOS ---
-
-// Se ejecuta cuando el HTML está completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // Listener principal: se ejecuta cada vez que hay un cambio en la base de datos
     database.ref().on('value', async (snapshot) => {
         const data = snapshot.val();
         if (data && data.jugadores) {
             currentDbData = data;
-            
             const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             const resetTime = new Date(nextMatchDate);
             resetTime.setHours(22, 0, 0, 0);
-
             if (ahora > resetTime) {
                 const newMatchDate = getNextWednesday();
-                const updates = {
-                    'refuerzos': null,
-                    'matchInfo/nextMatchDate': newMatchDate.toISOString()
-                };
+                const updates = {'refuerzos': null, 'matchInfo/nextMatchDate': newMatchDate.toISOString()};
                 currentDbData.jugadores.forEach((_, index) => {
                     updates[`jugadores/${index}/status`] = 'pendiente';
                 });
@@ -217,13 +203,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listener de eventos en la tabla (usando delegación de eventos para borrado y cambios)
     document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
         if (e.target.classList.contains('delete-player-btn')) {
             const fila = e.target.closest('tr');
             const index = parseInt(fila.dataset.index, 10);
             const jugador = currentDbData.jugadores[index];
-            
             if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
                 const updatedPlayers = currentDbData.jugadores.filter((_, i) => i !== index);
                 database.ref('jugadores').set(updatedPlayers)
@@ -245,7 +229,6 @@ document.addEventListener('DOMContentLoaded', function() {
         database.ref(`jugadores/${index}`).update(updateData);
     });
 
-    // Listeners del Modo Test
     document.getElementById('apply-test-date').addEventListener('click', () => {
         const dateValue = document.getElementById('test-date').value;
         simulatedTime = dateValue ? new Date(dateValue) : null;
@@ -257,7 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUI();
     });
 
-    // Listener del botón de reset manual
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
@@ -268,7 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listener del botón para añadir refuerzos
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
@@ -280,7 +261,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Listener para añadir un nuevo jugador a la plantilla
     document.getElementById('add-player-btn').addEventListener('click', () => {
         const newName = document.getElementById('new-player-name').value.trim();
         if (!newName) { return alert("Por favor, introduce un nombre."); }
@@ -296,7 +276,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => alert("Error al añadir jugador: " + error.message));
     });
 
-    // Listener para borrar refuerzos
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-refuerzo')) {
             const refKey = e.target.dataset.key;
@@ -314,7 +293,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // --- FUNCIONES DE RENDERIZADO Y CÁLCULO ---
-
 function getCurrentTime() {
     return simulatedTime ? new Date(simulatedTime) : new Date();
 }
@@ -342,40 +320,45 @@ function renderSummary() {
         else listaPendiente.push(j);
     });
 
-    let probabilidad, recomendacion, claseColor;
+    let probabilidad, recomendacion, claseColor, overrideHtml = null;
+    let showRefuerzosForce = false;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
-    
-    // --- INICIO DEL ALGORITMO DE PROBABILIDAD DEFINITIVO ---
+    const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
+
+    // --- LÓGICA DE ESTADOS Y CÁLCULO DE PROBABILIDAD ---
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
+    } else if (maximoPosiblePlantilla < JUGADORES_NECESARIOS) {
+        // ESTADO DE EMERGENCIA: Imposible llegar a 10 solo con la plantilla.
+        claseColor = "rojo";
+        const faltan = JUGADORES_NECESARIOS - totalConfirmados;
+        // Se sobreescribe el HTML para no mostrar el porcentaje.
+        overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en riesgo</p>
+                        <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
+        showRefuerzosForce = true;
     } else {
+        // ESTADO NORMAL: Se calcula la proyección.
         const ahora = getCurrentTime();
-        // La "tarta" a repartir disminuye por cada "Sí" y cada refuerzo
-        const porcentajeRestante = 100 - (totalConfirmados * 10);
-        // El "peso" de cada pendiente se calcula dividiendo la tarta restante SIEMPRE entre 17
-        const pesoBasePendiente = porcentajeRestante / jugadores.length;
+        let porcentajeRestante = 100 - (totalConfirmados * 10);
         
         let proyeccionPendientes = 0;
         if (listaPendiente.length > 0) {
+            const pesoBasePendiente = porcentajeRestante / jugadores.length;
             listaPendiente.forEach(jugador => {
-                // Solo se suma si su fiabilidad es mayor que 0
                 const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
                 if (fiabilidad > 0) {
                     const mondayStart = new Date(matchDate);
                     mondayStart.setDate(mondayStart.getDate() - 2);
                     mondayStart.setHours(0, 0, 0, 0);
-
                     const tuesdayEnd = new Date(mondayStart);
                     tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
                     tuesdayEnd.setHours(14, 0, 0, 0);
-
                     let factorTiempo = 1.0;
                     if (ahora > mondayStart) {
                         if (ahora < tuesdayEnd) {
-                            const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
-                            factorTiempo = 1.0 - decay;
+                            factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
                         } else {
                             factorTiempo = 0.33;
                         }
@@ -385,7 +368,8 @@ function renderSummary() {
             });
         }
         
-        probabilidad = (totalConfirmados * 10) + proyeccionPendientes;
+        probabilidad = (totalConfirmados * 10) - (listaRefuerzos.length * 10) + proyeccionPendientes;
+        probabilidad += listaRefuerzos.length * 10;
 
         const decayStart = new Date(matchDate);
         decayStart.setDate(decayStart.getDate() - 1);
@@ -412,21 +396,18 @@ function renderSummary() {
         }
     }
     
-    probabilidad = Math.min(100, Math.max(0, probabilidad));
-    
-    // --- FIN DEL ALGORITMO Y LÓGICA DE MENSAJES Y VISIBILIDAD ---
+    // --- AJUSTES FINALES Y RENDERIZADO ---
+    if (probabilidad) probabilidad = Math.min(100, Math.max(0, probabilidad));
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
-        recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas.</small>';
+        recomendacion = (overrideHtml ? '' : recomendacion) + '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas.</small>';
     }
     
     let isRefuerzosOpen = false;
-    if (isAdmin) {
-        isRefuerzosOpen = true;
-    } else if (totalConfirmados >= 10) {
-        isRefuerzosOpen = false;
-    } else if (loggedInPlayer) {
+    if (isAdmin) { isRefuerzosOpen = true; } 
+    else if (totalConfirmados >= 10) { isRefuerzosOpen = false; }
+    else if (loggedInPlayer) {
         const ahora = getCurrentTime();
         const tuesdayActivationTime = new Date(matchDate);
         tuesdayActivationTime.setDate(tuesdayActivationTime.getDate() - 1);
@@ -434,14 +415,14 @@ function renderSummary() {
         const mondayActivationTime = new Date(matchDate);
         mondayActivationTime.setDate(mondayActivationTime.getDate() - 2);
         mondayActivationTime.setHours(14, 0, 0, 0);
-        if ((listaSi.length + listaPendiente.length) < JUGADORES_NECESARIOS) { isRefuerzosOpen = true; } // Modo Urgente
+        if (showRefuerzosForce) { isRefuerzosOpen = true; }
         else if (ahora >= tuesdayActivationTime) { isRefuerzosOpen = true; } 
         else if (ahora >= mondayActivationTime && probabilidad <= 80) { isRefuerzosOpen = true; }
     }
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
 
-    if (isRefuerzosOpen && !( (listaSi.length + listaPendiente.length) < JUGADORES_NECESARIOS) ) {
+    if (isRefuerzosOpen && !showRefuerzosForce) {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
@@ -456,9 +437,13 @@ function renderSummary() {
 
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
-    resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">posibilidades de jugar</span></p><p class="recomendacion">${recomendacion}</p>
-        <div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong>
-        <ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
+    const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
+    
+    if (overrideHtml) {
+        resultadoDiv.innerHTML = overrideHtml + listaHtml;
+    } else {
+        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">posibilidades de jugar</span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
+    }
 }
 
 function renderTable() {
@@ -493,10 +478,8 @@ function applyVisibility() {
         const now = getCurrentTime();
         timeDisplay.textContent = `Hora del sistema: ${now.toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })} ${simulatedTime ? '(SIMULADA)' : ''}`;
     }
-
     document.getElementById('tabla-jugadores').style.display = (isAdmin || loggedInPlayer) ? '' : 'none';
     document.body.classList.toggle('admin-view', isAdmin);
-
     document.querySelectorAll('#tabla-jugadores tbody tr').forEach(fila => {
         const index = parseInt(fila.dataset.index, 10);
         const isPlayerRow = loggedInPlayer && loggedInPlayer.index === index;
