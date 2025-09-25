@@ -196,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data && data.jugadores) {
             currentDbData = data;
             
-            // Comprueba si es hora de resetear automáticamente la asistencia (ej. después del partido)
             const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             const resetTime = new Date(nextMatchDate);
@@ -211,36 +210,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentDbData.jugadores.forEach((_, index) => {
                     updates[`jugadores/${index}/status`] = 'pendiente';
                 });
-                await database.ref().update(updates); // Realiza el reseteo
+                await database.ref().update(updates); 
             } else {
-                renderUI(); // Si no es hora de resetear, simplemente renderiza la interfaz
+                renderUI(); 
             }
         }
     });
 
-    // Listener de eventos en la tabla (usando delegación de eventos)
+    // Listener de eventos en la tabla (usando delegación de eventos para borrado y cambios)
     document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
-        // Si el clic fue en un botón de borrar jugador
         if (e.target.classList.contains('delete-player-btn')) {
             const fila = e.target.closest('tr');
             const index = parseInt(fila.dataset.index, 10);
             const jugador = currentDbData.jugadores[index];
             
             if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
-                // Filtra el array de jugadores para quitar al seleccionado
                 const updatedPlayers = currentDbData.jugadores.filter((_, i) => i !== index);
-                // Sube el nuevo array a Firebase, sobreescribiendo el anterior
                 database.ref('jugadores').set(updatedPlayers)
                     .then(() => alert(`${jugador.nombre} ha sido eliminado.`))
                     .catch(error => alert("Error al eliminar: " + error.message));
             }
         }
     });
-
-    // Listener para guardar cambios en los inputs de la tabla
     document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
         const fila = e.target.closest('tr');
-        if(!fila || e.target.type !== 'radio') return; // Solo actuar en cambios de radio
+        if(!fila || !e.target.name.startsWith('status-')) return;
         const index = fila.dataset.index;
         const updateData = {
             jugados: parseInt(fila.querySelector('.jugados').value),
@@ -263,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUI();
     });
 
-    // Listener del botón de reset manual (solo admin)
+    // Listener del botón de reset manual
     document.getElementById('reset-button').addEventListener('click', () => {
         if (confirm('¿Poner a todos los jugadores en "Pendiente"?')) {
             const updates = {};
@@ -274,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listener del botón para añadir refuerzos (amigos)
+    // Listener del botón para añadir refuerzos
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
@@ -286,28 +280,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Listener para añadir un nuevo jugador a la plantilla (solo admin)
+    // Listener para añadir un nuevo jugador a la plantilla
     document.getElementById('add-player-btn').addEventListener('click', () => {
         const newName = document.getElementById('new-player-name').value.trim();
-        if (!newName) {
-            alert("Por favor, introduce un nombre.");
-            return;
-        }
+        if (!newName) { return alert("Por favor, introduce un nombre."); }
         const newPassword = prompt(`Introduce la contraseña para ${newName}:`);
-        if (!newPassword) {
-            alert("La contraseña no puede estar vacía.");
-            return;
-        }
-
-        const newPlayer = {
-            nombre: newName,
-            password: newPassword,
-            status: "pendiente",
-            jugados: 0,
-            total: 0,
-            bajas: 0
-        };
-
+        if (!newPassword) { return alert("La contraseña no puede estar vacía."); }
+        const newPlayer = { nombre: newName, password: newPassword, status: "pendiente", jugados: 0, total: 0, bajas: 0 };
         const updatedPlayers = [...currentDbData.jugadores, newPlayer];
         database.ref('jugadores').set(updatedPlayers)
             .then(() => {
@@ -317,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => alert("Error al añadir jugador: " + error.message));
     });
 
-    // Listener para borrar refuerzos (amigos)
+    // Listener para borrar refuerzos
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-refuerzo')) {
             const refKey = e.target.dataset.key;
@@ -336,24 +315,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // --- FUNCIONES DE RENDERIZADO Y CÁLCULO ---
 
-// Devuelve la hora actual o la simulada por el modo test
 function getCurrentTime() {
     return simulatedTime ? new Date(simulatedTime) : new Date();
 }
 
-// Función principal que llama a todas las demás para dibujar la interfaz
 function renderUI() {
     if (!currentDbData) return;
     document.getElementById('main-content').style.display = 'block';
-
     renderSummary();
     renderTable();
     applyVisibility();
 }
 
-// Dibuja el cuadro de resumen con la probabilidad
 function renderSummary() {
-    // 1. OBTENER DATOS Y PREPARAR VARIABLES
     const { jugadores, refuerzos, matchInfo } = currentDbData;
     const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
@@ -369,49 +343,49 @@ function renderSummary() {
     });
 
     let probabilidad, recomendacion, claseColor;
-    let showRefuerzosForce = false;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
     
-    // 2. LÓGICA DE ESTADOS Y CÁLCULO DE PROBABILIDAD
+    // --- INICIO DEL ALGORITMO DE PROBABILIDAD DEFINITIVO ---
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
-        // ESTADO 1: Partido confirmado.
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
     } else {
-        // ESTADO 2: Proyección (no se ha llegado a 10 todavía)
         const ahora = getCurrentTime();
-        let porcentajeRestante = 100 - (listaSi.length * 10);
-        const jugadoresEnJuego = listaPendiente.length;
+        // La "tarta" a repartir disminuye por cada "Sí" y cada refuerzo
+        const porcentajeRestante = 100 - (totalConfirmados * 10);
+        // El "peso" de cada pendiente se calcula dividiendo la tarta restante SIEMPRE entre 17
+        const pesoBasePendiente = porcentajeRestante / jugadores.length;
         
         let proyeccionPendientes = 0;
-        if (jugadoresEnJuego > 0) {
-            const pesoDinamico = porcentajeRestante / jugadoresEnJuego;
+        if (listaPendiente.length > 0) {
             listaPendiente.forEach(jugador => {
+                // Solo se suma si su fiabilidad es mayor que 0
                 const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
-                const factorFiabilidad = Math.max(0, fiabilidad);
-                const mondayStart = new Date(matchDate);
-                mondayStart.setDate(mondayStart.getDate() - 2);
-                mondayStart.setHours(0, 0, 0, 0);
-                const tuesdayEnd = new Date(mondayStart);
-                tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
-                tuesdayEnd.setHours(14, 0, 0, 0);
+                if (fiabilidad > 0) {
+                    const mondayStart = new Date(matchDate);
+                    mondayStart.setDate(mondayStart.getDate() - 2);
+                    mondayStart.setHours(0, 0, 0, 0);
 
-                let factorTiempo = 1.0;
-                if (ahora > mondayStart) {
-                    if (ahora < tuesdayEnd) {
-                        const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
-                        factorTiempo = 1.0 - decay;
-                    } else {
-                        factorTiempo = 0.33;
+                    const tuesdayEnd = new Date(mondayStart);
+                    tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+                    tuesdayEnd.setHours(14, 0, 0, 0);
+
+                    let factorTiempo = 1.0;
+                    if (ahora > mondayStart) {
+                        if (ahora < tuesdayEnd) {
+                            const decay = (ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33);
+                            factorTiempo = 1.0 - decay;
+                        } else {
+                            factorTiempo = 0.33;
+                        }
                     }
+                    proyeccionPendientes += pesoBasePendiente * fiabilidad * factorTiempo;
                 }
-                proyeccionPendientes += pesoDinamico * factorFiabilidad * factorTiempo;
             });
         }
         
-        probabilidad = (listaSi.length * 10) + proyeccionPendientes;
-        probabilidad += listaRefuerzos.length * 10;
+        probabilidad = (totalConfirmados * 10) + proyeccionPendientes;
 
         const decayStart = new Date(matchDate);
         decayStart.setDate(decayStart.getDate() - 1);
@@ -421,8 +395,7 @@ function renderSummary() {
         let finalDecayActive = false;
         if (ahora > decayStart) {
             if (ahora < decayEnd) {
-                const decayFactor = 1 - ( (ahora - decayStart) / (decayEnd - decayStart) );
-                probabilidad *= decayFactor;
+                probabilidad *= 1 - ( (ahora - decayStart) / (decayEnd - decayStart) );
                 finalDecayActive = true;
             } else {
                 probabilidad = 0;
@@ -439,8 +412,9 @@ function renderSummary() {
         }
     }
     
-    // 3. AJUSTES FINALES Y MENSAJES ADICIONALES
     probabilidad = Math.min(100, Math.max(0, probabilidad));
+    
+    // --- FIN DEL ALGORITMO Y LÓGICA DE MENSAJES Y VISIBILIDAD ---
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
@@ -457,27 +431,20 @@ function renderSummary() {
         const tuesdayActivationTime = new Date(matchDate);
         tuesdayActivationTime.setDate(tuesdayActivationTime.getDate() - 1);
         tuesdayActivationTime.setHours(14, 0, 0, 0);
-
         const mondayActivationTime = new Date(matchDate);
         mondayActivationTime.setDate(mondayActivationTime.getDate() - 2);
         mondayActivationTime.setHours(14, 0, 0, 0);
-
-        if (showRefuerzosForce) {
-            isRefuerzosOpen = true;
-        } else if (ahora >= tuesdayActivationTime) {
-            isRefuerzosOpen = true;
-        } else if (ahora >= mondayActivationTime && probabilidad <= 80) {
-            isRefuerzosOpen = true;
-        }
+        if ((listaSi.length + listaPendiente.length) < JUGADORES_NECESARIOS) { isRefuerzosOpen = true; } // Modo Urgente
+        else if (ahora >= tuesdayActivationTime) { isRefuerzosOpen = true; } 
+        else if (ahora >= mondayActivationTime && probabilidad <= 80) { isRefuerzosOpen = true; }
     }
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
 
-    if (isRefuerzosOpen && !showRefuerzosForce) {
+    if (isRefuerzosOpen && !( (listaSi.length + listaPendiente.length) < JUGADORES_NECESARIOS) ) {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
-    // 4. RENDERIZADO DEL HTML
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
@@ -494,7 +461,6 @@ function renderSummary() {
         <ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
 }
 
-// Dibuja la tabla de jugadores
 function renderTable() {
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
     tablaBody.innerHTML = '';
@@ -519,7 +485,6 @@ function renderTable() {
     });
 }
 
-// Aplica las reglas de visibilidad según el estado de login
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
     testSection.style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
@@ -544,7 +509,6 @@ function applyVisibility() {
     });
 }
 
-// Calcula la fecha del próximo miércoles
 function getNextWednesday() {
     const d = getCurrentTime();
     const today = d.getDay();
