@@ -353,6 +353,7 @@ function renderUI() {
 
 // Dibuja el cuadro de resumen con la probabilidad
 function renderSummary() {
+    // 1. OBTENER DATOS Y PREPARAR VARIABLES
     const { jugadores, refuerzos, matchInfo } = currentDbData;
     const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
@@ -371,12 +372,14 @@ function renderSummary() {
     let showRefuerzosForce = false;
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
     
-    // --- INICIO DEL ALGORITMO DE PROBABILIDAD ---
+    // 2. LÓGICA DE ESTADOS Y CÁLCULO DE PROBABILIDAD
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
+        // ESTADO 1: Partido confirmado.
         probabilidad = 100;
         claseColor = "verde";
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
     } else {
+        // ESTADO 2: Proyección (no se ha llegado a 10 todavía)
         const ahora = getCurrentTime();
         let porcentajeRestante = 100 - (listaSi.length * 10);
         const jugadoresEnJuego = listaPendiente.length;
@@ -387,11 +390,9 @@ function renderSummary() {
             listaPendiente.forEach(jugador => {
                 const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
                 const factorFiabilidad = Math.max(0, fiabilidad);
-
                 const mondayStart = new Date(matchDate);
                 mondayStart.setDate(mondayStart.getDate() - 2);
                 mondayStart.setHours(0, 0, 0, 0);
-
                 const tuesdayEnd = new Date(mondayStart);
                 tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
                 tuesdayEnd.setHours(14, 0, 0, 0);
@@ -438,6 +439,7 @@ function renderSummary() {
         }
     }
     
+    // 3. AJUSTES FINALES Y MENSAJES ADICIONALES
     probabilidad = Math.min(100, Math.max(0, probabilidad));
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
@@ -475,6 +477,7 @@ function renderSummary() {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
+    // 4. RENDERIZADO DEL HTML
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
