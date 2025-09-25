@@ -34,9 +34,11 @@
         .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
         .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
         
-        /* Icono para borrar refuerzos */
-        .delete-refuerzo{cursor:pointer;font-size:1.1em;opacity:0.7;margin-left:auto;}
-        .delete-refuerzo:hover{opacity:1;}
+        /* Icono para borrar refuerzos y jugadores */
+        .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
+        .delete-refuerzo{margin-left:auto;}
+        .delete-refuerzo:hover, .delete-player-btn:hover{opacity:1;}
+        .delete-player-btn {background:none; border:none; padding:0 5px; font-size:1.2em;}
         
         /* Colores del cuadro de resumen */
         .verde{background-color:#28a745}
@@ -73,7 +75,7 @@
             tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
             td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
             td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
-            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}
+            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Total"}td:nth-of-type(5):before{content:"Bajas"}td:nth-of-type(6):before{content:"Fiabilidad"}td:nth-of-type(7):before{content:"Acción"}
             .status-radio{justify-content:flex-end}input[type=number]{width:70px}
             .admin-view .admin-only{display:block !important;}
         }
@@ -98,7 +100,7 @@
         </div>
         
         <table id="tabla-jugadores">
-            <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Jugados</th><th class="admin-only">Total</th><th class="admin-only">Bajas</th><th>Fiabilidad</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Jugados</th><th class="admin-only">Total</th><th class="admin-only">Bajas</th><th>Fiabilidad</th><th class="admin-only">Acción</th></tr></thead>
             <tbody></tbody>
         </table>
 
@@ -216,10 +218,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listener para guardar cambios en la tabla (estado, jugados, etc.)
+    // Listener de eventos en la tabla (usando delegación de eventos)
+    document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
+        // Si el clic fue en un botón de borrar jugador
+        if (e.target.classList.contains('delete-player-btn')) {
+            const fila = e.target.closest('tr');
+            const index = parseInt(fila.dataset.index, 10);
+            const jugador = currentDbData.jugadores[index];
+            
+            if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
+                // Filtra el array de jugadores para quitar al seleccionado
+                const updatedPlayers = currentDbData.jugadores.filter((_, i) => i !== index);
+                // Sube el nuevo array a Firebase, sobreescribiendo el anterior
+                database.ref('jugadores').set(updatedPlayers)
+                    .then(() => alert(`${jugador.nombre} ha sido eliminado.`))
+                    .catch(error => alert("Error al eliminar: " + error.message));
+            }
+        }
+    });
+
+    // Listener para guardar cambios en los inputs de la tabla
     document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
         const fila = e.target.closest('tr');
-        if(!fila) return;
+        if(!fila || e.target.type !== 'radio') return; // Solo actuar en cambios de radio
         const index = fila.dataset.index;
         const updateData = {
             jugados: parseInt(fila.querySelector('.jugados').value),
@@ -357,20 +378,16 @@ function renderSummary() {
         recomendacion = `¡PARTIDO CONFIRMADO! Ya sois ${totalConfirmados}.`;
     } else {
         const ahora = getCurrentTime();
-        // El % restante a repartir entre los que no han dicho 'No'
         let porcentajeRestante = 100 - (listaSi.length * 10);
-        // Jugadores que todavía pueden decir 'Sí' (los pendientes)
         const jugadoresEnJuego = listaPendiente.length;
         
         let proyeccionPendientes = 0;
         if (jugadoresEnJuego > 0) {
-            // El peso de cada jugador pendiente se calcula dinámicamente
             const pesoDinamico = porcentajeRestante / jugadoresEnJuego;
             listaPendiente.forEach(jugador => {
                 const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
                 const factorFiabilidad = Math.max(0, fiabilidad);
 
-                // Cálculo del factor tiempo
                 const mondayStart = new Date(matchDate);
                 mondayStart.setDate(mondayStart.getDate() - 2);
                 mondayStart.setHours(0, 0, 0, 0);
@@ -388,17 +405,13 @@ function renderSummary() {
                         factorTiempo = 0.33;
                     }
                 }
-                // Se suma la aportación ponderada de cada pendiente
                 proyeccionPendientes += pesoDinamico * factorFiabilidad * factorTiempo;
             });
         }
         
-        // La probabilidad es la suma de los confirmados + la proyección de los pendientes
         probabilidad = (listaSi.length * 10) + proyeccionPendientes;
-        // Los refuerzos suman un 10% directo cada uno, ya que no son parte de la plantilla original
         probabilidad += listaRefuerzos.length * 10;
 
-        // Decaimiento final de última hora (Martes 14h -> Miércoles 21h)
         const decayStart = new Date(matchDate);
         decayStart.setDate(decayStart.getDate() - 1);
         decayStart.setHours(14, 0, 0, 0);
@@ -415,7 +428,6 @@ function renderSummary() {
             }
         }
         
-        // Asignación de color y recomendación
         if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = ""; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "⚠️ ¡Atención! La cosa está justa."; }
@@ -426,16 +438,13 @@ function renderSummary() {
         }
     }
     
-    // Clamp final para que la probabilidad no pase de 100 ni baje de 0
     probabilidad = Math.min(100, Math.max(0, probabilidad));
 
-    // Mensaje de aviso si hay jugadores con historial de bajas
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
         recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas.</small>';
     }
     
-    // Lógica para mostrar el cuadro de añadir refuerzos
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
@@ -466,7 +475,6 @@ function renderSummary() {
         recomendacion += '<br><small style="font-style: italic;">Ya está abierta la inscripción de amigos.</small>';
     }
 
-    // Renderizado final del HTML del cuadro de resumen
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
@@ -502,6 +510,7 @@ function renderTable() {
                 <td class="admin-only"><input type="number" class="total" value="${jugador.total || 0}" min="0"></td>
                 <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0"></td>
                 <td class="fiabilidad">${fiabilidad}</td>
+                <td class="admin-only"><button class="delete-player-btn" title="Eliminar a ${jugador.nombre}">🗑️</button></td>
             </tr>`;
         tablaBody.innerHTML += fila;
     });
