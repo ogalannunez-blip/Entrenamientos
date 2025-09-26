@@ -198,7 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             const resetTime = new Date(nextMatchDate);
             resetTime.setHours(22, 0, 0, 0);
-
             if (ahora > resetTime) {
                 const newMatchDate = getNextWednesday();
                 const updates = {'refuerzos': null, 'matchInfo/nextMatchDate': newMatchDate.toISOString()};
@@ -231,15 +230,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!fila) return;
         const index = fila.dataset.index;
         const target = e.target;
-        
-        // Guardado automático para Jugados y Bajas
         if (target.classList.contains('jugados') || target.classList.contains('bajas')) {
             const key = target.classList.contains('jugados') ? 'jugados' : 'bajas';
             const value = parseInt(target.value, 10);
             database.ref(`jugadores/${index}/${key}`).set(value);
-        } 
-        // Guardado para el cambio de estado
-        else if (target.name.startsWith('status-')) {
+        } else if (target.name.startsWith('status-')) {
              database.ref(`jugadores/${index}/status`).set(target.value);
         }
     });
@@ -361,7 +356,6 @@ function renderSummary() {
     const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
     const partidosJugados = (jugadores[0] && jugadores[0].total) || 0;
 
-    // --- LÓGICA DE ESTADOS Y CÁLCULO DE PROBABILIDAD ---
     if (totalConfirmados >= JUGADORES_NECESARIOS) {
         claseColor = "verde";
         recomendacion = `Ya sois ${totalConfirmados}.`;
@@ -376,7 +370,14 @@ function renderSummary() {
         const ahora = getCurrentTime();
         let proyeccionPendientes = 0;
         listaPendiente.forEach(jugador => {
-            const fiabilidad = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
+            // --- NUEVO: Se calcula una fiabilidad mínima que decrece con los partidos ---
+            // Empieza en 0.2 (20% de fiabilidad base) y baja a 0 en 100 partidos.
+            const pisoFiabilidad = Math.max(0, 0.2 * (1 - (partidosJugados / 100)));
+            const fiabilidadReal = (jugador.total > 0) ? (jugador.jugados / jugador.total) : 0;
+            // Se usa la fiabilidad real o el mínimo, la que sea mayor.
+            const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
+            // --- FIN DEL AJUSTE ---
+
             const mondayStart = new Date(matchDate);
             mondayStart.setDate(mondayStart.getDate() - 2);
             mondayStart.setHours(0, 0, 0, 0);
@@ -424,7 +425,7 @@ function renderSummary() {
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
     if(hayJugadorConBajas) {
-        recomendacion = (overrideHtml ? '' : recomendacion) + '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas.</small>';
+        recomendacion = (overrideHtml ? '' : recomendacion) + '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
     
     let isRefuerzosOpen = false;
