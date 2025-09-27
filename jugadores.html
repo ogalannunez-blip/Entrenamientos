@@ -18,9 +18,8 @@
         table{width:100%;border-collapse:collapse;margin-top:20px}
         th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
         th{background-color:#f2f2f2}
-        .player-name{cursor:pointer; font-weight: bold;}
-        .player-name:hover{color:#1a73e8;}
 
+        /* Estilo para los nombres clicables en el resumen */
         .summary-player-name {
             cursor: pointer;
             text-decoration: underline;
@@ -44,19 +43,19 @@
         .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
         .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
         
-        /* Estilos para el icono de información SVG */
+        /* --- MODIFICADO: Estilos para el icono de información SVG --- */
         .info-icon-svg { 
             display: inline-block;
             vertical-align: middle;
             margin-left: 8px;
             cursor: pointer;
-            opacity: 0.8;
-            transition: opacity 0.2s ease-in-out;
+            opacity: 1; /* Sin transparencia */
+            transition: transform 0.2s ease-in-out;
             fill: currentColor;
             height: 18px;
             width: 18px;
         }
-        .info-icon-svg:hover { opacity: 1; }
+        .info-icon-svg:hover { transform: scale(1.1); }
         .ambar .info-icon-svg { fill: #333; }
         
         /* Icono para borrar refuerzos y jugadores */
@@ -93,7 +92,7 @@
         /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
 
-        /* --- NUEVO: Estilos para la Ventana Modal Personalizada --- */
+        /* Estilos para la Ventana Modal Personalizada */
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
@@ -193,7 +192,7 @@ let currentDbData = null;
 let simulatedTime = null; 
 let isMatchPendingActivation = false;
 
-// --- NUEVO: Función para mostrar la ventana modal personalizada ---
+// --- Función para mostrar la ventana modal personalizada ---
 function showCustomAlert(title, message) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-message').textContent = message;
@@ -223,7 +222,10 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             isAdmin = true;
             loggedInPlayer = null;
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
-        } else if (pass) { showCustomAlert('Error', 'Contraseña incorrecta.'); }
+        } else if (pass) { 
+            // --- MODIFICADO: Usa la ventana modal ---
+            showCustomAlert('Error', 'Contraseña incorrecta.'); 
+        }
     }
     renderUI();
 });
@@ -241,6 +243,7 @@ document.getElementById('player-login').addEventListener('click', () => {
         isAdmin = false;
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
     } else {
+        // --- MODIFICADO: Usa la ventana modal ---
         showCustomAlert('Error', 'Código de acceso no reconocido.');
     }
     renderUI();
@@ -266,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Delegación de eventos para la tabla
+    // Delegación de eventos para la tabla (solo para borrar y cambiar estado)
     document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
         const fila = e.target.closest('tr');
         if (!fila) return;
@@ -281,9 +284,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(() => showCustomAlert('Información', `${jugador.nombre} ha sido eliminado.`))
                     .catch(error => showCustomAlert('Error', "Error al eliminar: " + error.message));
             }
-        }
-        else if (e.target.classList.contains('player-name')) {
-            showPlayerReliability(playerKey);
         }
     });
     
@@ -423,20 +423,44 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
+// --- MODIFICADO: Muestra fiabilidad reciente Y global ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
     const history = currentDbData.historial || {};
+    
+    // Cálculo últimos 4 partidos
     const last4Matches = Object.keys(history).sort().slice(-4);
-    let attended = 0;
+    let attendedLast4 = 0;
     last4Matches.forEach(matchKey => {
-        const matchData = history[matchKey];
-        if (matchData.jugadores && matchData.jugadores[playerKey] && matchData.jugadores[playerKey].status === 'si') {
-            attended++;
+        if (history[matchKey].jugadores?.[playerKey]?.status === 'si') {
+            attendedLast4++;
         }
     });
-    const reliabilityPercentage = last4Matches.length > 0 ? (attended / last4Matches.length * 100).toFixed(0) : 0;
-    const message = `Asistencias: ${attended} de ${last4Matches.length}\nPorcentaje: ${reliabilityPercentage}%`;
+    const reliabilityLast4 = last4Matches.length > 0 ? (attendedLast4 / last4Matches.length * 100).toFixed(0) : 0;
+
+    // Cálculo global
+    const allMatches = Object.keys(history);
+    let attendedAllTime = 0;
+    let answeredAllTime = 0;
+    allMatches.forEach(matchKey => {
+        const playerStatus = history[matchKey].jugadores?.[playerKey]?.status;
+        if (playerStatus === 'si') {
+            attendedAllTime++;
+            answeredAllTime++;
+        } else if (playerStatus === 'no') {
+            answeredAllTime++;
+        }
+    });
+    const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
+
+    const message = `ÚLTIMOS 4 PARTIDOS:\n` +
+                  `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` +
+                  `Fiabilidad: ${reliabilityLast4}%\n\n` +
+                  `GLOBAL (Todos los partidos):\n` +
+                  `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` +
+                  `Fiabilidad: ${reliabilityAllTime}% (sobre ${answeredAllTime} respuestas Sí/No)`;
+                  
     showCustomAlert(`Fiabilidad de ${currentDbData.jugadores[playerKey].nombre}`, message);
 }
 
@@ -501,8 +525,7 @@ function renderSummary() {
         listaPendiente.forEach(jugador => {
             let attended = 0;
             last4MatchesKeys.forEach(matchKey => {
-                const matchData = historial[matchKey];
-                if (matchData.jugadores && matchData.jugadores[jugador.key] && matchData.jugadores[jugador.key].status === 'si') {
+                if (historial[matchKey].jugadores?.[jugador.key]?.status === 'si') {
                     attended++;
                 }
             });
@@ -549,8 +572,9 @@ function renderSummary() {
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { claseColor = "rojo"; recomendacion = "🔥 El partido peligra."; }
 
+        // --- MODIFICADO: Mensaje acortado ---
         if (finalDecayActive) {
-            recomendacion += "<br><small>⚠️ ¡El tiempo se agota! La probabilidad disminuye cada hora.</small>";
+            recomendacion += "<br><small>⚠️ ¡El tiempo se agota!</small>";
         }
     }
     
@@ -588,7 +612,8 @@ function renderSummary() {
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
     if (isRefuerzosOpen && !showRefuerzosForce) {
-        recomendacion += '<br><small style="font-style: italic;">👥 Ya está abierta la inscripción de amigos.</small>';
+        // --- MODIFICADO: Mensaje acortado ---
+        recomendacion += '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
     }
 
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
@@ -604,8 +629,8 @@ function renderSummary() {
     resultadoDiv.className = 'resultado ' + claseColor;
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
-    // --- MEJORADO: Icono SVG sólido y limpio ---
-    const infoIconSvg = `<svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47a.5.5 0 0 1-.52-.43c.03-.533.57-1.037.94-1.037.525 0 .98.346 1.17.594l.088-.416c-.287-.346-.92-.598-1.465-.598C9.555 5.12 9.276 5 9 5c-.793 0-1.442.234-1.784.627-.18.21-.344.46-.478.756-.134.296-.196.635-.196.994 0 .343.058.662.164.95.105.286.255.53.44.743.187.213.432.38.71.504l.26.108.016.007.016.006.015.006c.01 0 .02.002.03.003l.026.009.022.007c.022.007.045.014.068.02.045.013.09.026.136.038.046.012.093.023.14.033l.028.006c.26.056.49.096.677.12.188.024.36.037.5.037.284 0 .54-.034.74-.105.203-.07.356-.182.46-.34.103-.157.155-.35.155-.572 0-.22-.047-.41-.14-.565-.093-.155-.24-.267-.44-.33l-.26-.086zM8 4.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+    // --- MODIFICADO: Icono SVG sólido y limpio ---
+    const infoIconSvg = `<svg viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16M8.93 6.588 7.002 11.16l-.22.95.45.084c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.294.294 0 0 1-.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47L8 11.411v.002zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 
     if (overrideHtml) {
         resultadoDiv.innerHTML = overrideHtml + listaHtml;
@@ -627,8 +652,7 @@ function renderTable() {
         
         let attended = 0;
         last4Matches.forEach(matchKey => {
-            const matchData = history[matchKey];
-            if (matchData.jugadores && matchData.jugadores[key] && matchData.jugadores[key].status === 'si') {
+            if (history[matchKey].jugadores?.[key]?.status === 'si') {
                 attended++;
             }
         });
@@ -638,7 +662,7 @@ function renderTable() {
         
         const fila = `
             <tr data-key="${key}">
-                <td><span class="player-name">${jugador.nombre}</span></td>
+                <td>${jugador.nombre}</td>
                 <td><div class="status-radio">
                     <label><input type="radio" name="status-${key}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
                     <label><input type="radio" name="status-${key}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
