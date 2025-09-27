@@ -20,6 +20,17 @@
         th{background-color:#f2f2f2}
         .player-name{cursor:pointer; font-weight: bold;}
         .player-name:hover{color:#1a73e8;}
+
+        /* --- NUEVO: Estilo para los nombres clicables en el resumen --- */
+        .summary-player-name {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-thickness: 1px;
+        }
+        .summary-player-name:hover {
+            color: #1a73e8;
+        }
         
         /* Estilos para campos de entrada */
         input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
@@ -36,21 +47,22 @@
         .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
         .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
         
-        /* --- MEJORADO: Estilos para el icono de información SVG --- */
+        /* Estilos para el icono de información SVG */
         .info-icon-svg { 
             display: inline-block;
             vertical-align: middle;
-            margin-left: 8px; /* Más espacio */
+            margin-left: 8px;
             cursor: pointer;
-            opacity: 0.9; /* Más opaco por defecto */
+            opacity: 0.9;
             transition: opacity 0.2s ease-in-out;
-            fill: #fff; /* Relleno blanco para contraste */
-            stroke: #333; /* Borde oscuro para visibilidad */
-            stroke-width: 1px; /* Grosor del borde */
-            height: 18px; /* Un poco más grande */
-            width: 18px; /* Un poco más grande */
+            fill: #fff;
+            stroke: #333;
+            stroke-width: 1px;
+            height: 18px;
+            width: 18px;
         }
-        .info-icon-svg:hover { opacity: 1; fill: #eee; stroke: #000; } /* Efecto hover más pronunciado */
+        .info-icon-svg:hover { opacity: 1; fill: #eee; stroke: #000; }
+        .ambar .info-icon-svg { fill: #333; stroke: #fff; } /* Icono visible en fondo ámbar */
         
         /* Icono para borrar refuerzos y jugadores */
         .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
@@ -68,14 +80,14 @@
         .admin-only{display:none}
         .admin-view .admin-only{display:table-cell !important;}
         .admin-view .admin-button{display:block !important;}
-        .admin-view #add-player-section, .admin-view #global-stats-section{display:block !important;}
+        .admin-view #add-player-section{display:block !important;}
 
         /* Iconos de login y candado */
         #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
         #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}
         
         /* Secciones de admin */
-        #refuerzos-section, #add-player-section, #global-stats-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
+        #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
         
         /* Estilos para iconos de estado */
         .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
@@ -243,20 +255,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(error => alert("Error al eliminar: " + error.message));
             }
         }
-        // --- CORREGIDO: Ahora funciona el click en el nombre del jugador ---
         else if (e.target.classList.contains('player-name')) {
-            const history = currentDbData.historial || {};
-            const last4Matches = Object.keys(history).sort().slice(-4);
-            let attended = 0;
-            last4Matches.forEach(matchKey => {
-                const matchData = history[matchKey];
-                // Asegurarse de que el matchData y el jugador existan y tengan un status 'si'
-                if (matchData.jugadores && matchData.jugadores[playerKey] && matchData.jugadores[playerKey].status === 'si') {
-                    attended++;
-                }
-            });
-            const reliabilityPercentage = last4Matches.length > 0 ? (attended / last4Matches.length * 100).toFixed(0) : 0;
-            alert(`Fiabilidad de ${currentDbData.jugadores[playerKey].nombre} (últimos ${last4Matches.length} partidos):\n\nAsistencias: ${attended} de ${last4Matches.length}\nPorcentaje: ${reliabilityPercentage}%`);
+            showPlayerReliability(playerKey);
         }
     });
     
@@ -301,14 +301,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const { jugadores, refuerzos, matchInfo } = currentDbData;
         const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
-        // Usamos un formato de clave simple y válido para Firebase
         const matchKey = oldMatchDate.toISOString().replace(/\..+/, '').replace(/[:T]/g, '-');
 
         const listaSi = Object.values(jugadores).filter(j => j.status === 'si');
         const listaRefuerzos = refuerzos ? Object.values(refuerzos) : [];
         const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
-        // Preparamos los datos del historial con la estructura simplificada
         const historialJugadores = {};
         Object.keys(jugadores).forEach(key => {
             historialJugadores[key] = {
@@ -368,11 +366,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => alert("Error al añadir jugador: " + error.message));
     });
     
-    // Listener principal del contenedor para borrar refuerzos y para el icono de info
+    // Listener principal del contenedor para varios eventos
     document.querySelector('.container').addEventListener('click', function(e) {
-        if (e.target.classList.contains('delete-refuerzo')) {
-            const refKey = e.target.dataset.key;
-            const refOwner = e.target.dataset.owner;
+        // Borrar refuerzo
+        if (e.target.closest('.delete-refuerzo')) {
+            const refKey = e.target.closest('.delete-refuerzo').dataset.key;
+            const refOwner = e.target.closest('.delete-refuerzo').dataset.owner;
             if (isAdmin || (loggedInPlayer && loggedInPlayer.nombre === refOwner)) {
                 if (refKey && confirm('¿Quitar a este refuerzo de la lista?')) {
                     database.ref('refuerzos/' + refKey).remove();
@@ -381,17 +380,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Solo el admin o la persona que añadió el refuerzo puede borrarlo.');
             }
         }
-        // --- MEJORADO: Listener para el icono de información ---
-        if (e.target.closest('#prob-info-icon')) {
+        // Icono de información
+        else if (e.target.closest('#prob-info-icon')) {
             alert('Probabilidad basada en los datos históricos de los últimos cuatro partidos.');
+        }
+        // --- NUEVO: Click en nombre de jugador en el resumen ---
+        else if (e.target.classList.contains('summary-player-name')) {
+            const playerKey = e.target.dataset.key;
+            if (playerKey) {
+                showPlayerReliability(playerKey);
+            }
         }
     });
 });
 
 
-// --- FUNCIONES DE RENDERIZADO Y CÁLCULO ---
+// --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
+// --- NUEVA FUNCIÓN: Muestra la fiabilidad de un jugador ---
+function showPlayerReliability(playerKey) {
+    if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
+
+    const history = currentDbData.historial || {};
+    const last4Matches = Object.keys(history).sort().slice(-4);
+    let attended = 0;
+    last4Matches.forEach(matchKey => {
+        const matchData = history[matchKey];
+        if (matchData.jugadores && matchData.jugadores[playerKey] && matchData.jugadores[playerKey].status === 'si') {
+            attended++;
+        }
+    });
+    const reliabilityPercentage = last4Matches.length > 0 ? (attended / last4Matches.length * 100).toFixed(0) : 0;
+    alert(`Fiabilidad de ${currentDbData.jugadores[playerKey].nombre} (últimos ${last4Matches.length} partidos):\n\nAsistencias: ${attended} de ${last4Matches.length}\nPorcentaje: ${reliabilityPercentage}%`);
+}
+
+// --- FUNCIONES DE RENDERIZADO ---
 function renderUI() {
     if (!currentDbData) return;
     document.getElementById('main-content').style.display = 'block';
@@ -459,7 +483,7 @@ function renderSummary() {
             });
             const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
             
-            const pisoFiabilidad = 0.1; // Puedes ajustar este valor si lo deseas
+            const pisoFiabilidad = 0.1;
             const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
 
             const mondayStart = new Date(matchDate);
@@ -478,7 +502,7 @@ function renderSummary() {
         
         probabilidad = (totalConfirmados * 10) + proyeccionPendientes;
         
-        const cap = 98; // Tope de probabilidad antes de la confirmación
+        const cap = 98;
         probabilidad = Math.min(probabilidad, cap);
 
         const decayStart = new Date(matchDate);
@@ -542,26 +566,26 @@ function renderSummary() {
         recomendacion += '<br><small style="font-style: italic;">👥 Ya está abierta la inscripción de amigos.</small>';
     }
 
-    const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> ${j.nombre}</li>`).join('');
+    // --- MEJORADO: Nombres clicables en el resumen ---
+    const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
         const delBtn = puedeBorrar ? `<span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span>` : '';
         return `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i> ${delBtn}</li>`;
     }).join('');
-    const pendienteHtml = listaPendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span> ${j.nombre}</li>`).join('');
-    const noHtml = listaNo.map(j => `<li><span class="status-icon icon-no">✖</span> ${j.nombre}</li>`).join('');
+    const pendienteHtml = listaPendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
+    const noHtml = listaNo.map(j => `<li><span class="status-icon icon-no">✖</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
 
     const resultadoDiv = document.getElementById('resultado');
     resultadoDiv.className = 'resultado ' + claseColor;
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
-    // --- MEJORADO: Icono SVG y movido al final ---
-    const infoIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.2"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.294.294 0 0 1-.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47L8 8.411v.002zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+    const infoIconSvg = `<svg class="info-icon-svg" id="prob-info-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8.93 6.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.294.294 0 0 1-.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47l-.45-.083v-.002zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 
     if (overrideHtml) {
         resultadoDiv.innerHTML = overrideHtml + listaHtml;
     } else {
-        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar <span id="prob-info-icon" class="info-icon-svg" title="Más información">${infoIconSvg}</span></span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar ${infoIconSvg}</span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
     }
 }
 
@@ -627,31 +651,22 @@ function applyVisibility() {
         } else {
             fila.style.display = '';
         }
-        fila.querySelectorAll('input, .delete-player-btn').forEach(element => { // También deshabilitar el botón de borrar para no-admins
+        fila.querySelectorAll('input, button').forEach(element => {
              element.disabled = !(isAdmin || isPlayerRow);
-             if (element.classList.contains('delete-player-btn') && !isAdmin) {
-                 element.style.display = 'none'; // Ocultar si no es admin
-             } else if (element.classList.contains('delete-player-btn') && isAdmin) {
-                 element.style.display = ''; // Mostrar si es admin
-             }
         });
     });
 }
 
 function getNextWednesday(forceNextWeek = false) {
     const d = new Date();
-    const today = d.getDay(); // 0 = Domingo, 1 = Lunes, ..., 3 = Miércoles
-    let offset = (3 - today + 7) % 7; // Días para el próximo miércoles (0 si es miércoles)
-
-    // Si ya es miércoles y son las 22:00h o más tarde, o si forceNextWeek es true,
-    // entonces el próximo partido es el miércoles de la semana siguiente.
+    const today = d.getDay();
+    let offset = (3 - today + 7) % 7;
     if (forceNextWeek || (offset === 0 && d.getHours() >= 22)) {
-        offset = offset === 0 ? 7 : offset + 7; // Sumar 7 días para ir al miércoles de la semana siguiente
+        offset += 7;
     }
-    
     const newDate = new Date(d);
     newDate.setDate(d.getDate() + offset);
-    newDate.setHours(21, 0, 0, 0); // Establecer la hora a las 21:00 (hora del partido)
+    newDate.setHours(21, 0, 0, 0);
     return newDate;
 }
 </script>
