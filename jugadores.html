@@ -453,12 +453,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
+// --- MODIFICADO: Cambios en el texto del pop-up de fiabilidad ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
     const history = currentDbData.historial || {};
     const playerName = currentDbData.jugadores[playerKey].nombre;
     
+    // Cálculo últimos 4 partidos
     const last4Matches = Object.keys(history).sort().slice(-4);
     let attendedLast4 = 0;
     last4Matches.forEach(matchKey => {
@@ -468,6 +470,7 @@ function showPlayerReliability(playerKey) {
     });
     const reliabilityLast4 = last4Matches.length > 0 ? (attendedLast4 / last4Matches.length * 100).toFixed(0) : 0;
 
+    // Cálculo global
     const allMatches = Object.keys(history);
     let attendedAllTime = 0;
     let answeredAllTime = 0;
@@ -485,9 +488,9 @@ function showPlayerReliability(playerKey) {
     const message = `ÚLTIMOS 4 PARTIDOS:\n` +
                   `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` +
                   `Fiabilidad: ${reliabilityLast4}%\n\n` +
-                  `GLOBAL (Todos los partidos):\n` +
+                  `TEMPORADA 25-26:\n` +
                   `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` +
-                  `Fiabilidad: ${reliabilityAllTime}% (sobre ${answeredAllTime} respuestas Sí/No)`;
+                  `Fiabilidad (Global): ${reliabilityAllTime}%`;
                   
     showCustomAlert(`Fiabilidad de ${playerName}`, message);
 }
@@ -519,7 +522,6 @@ function renderSummary() {
     const JUGADORES_NECESARIOS = 10;
     const listaSi = [], listaPendiente = [], listaNo = [];
     
-    // --- CORREGIDO: Bucle de jugadores para evitar errores ---
     const jugadoresObj = jugadores || {};
     Object.keys(jugadoresObj).forEach(key => {
         const j = {...jugadoresObj[key], key: key};
@@ -546,10 +548,11 @@ function renderSummary() {
                         <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
+        // --- MODIFICADO: Lógica de riesgo ANULADA Y DEVUELTA A LA NORMALIDAD ---
         const ahora = getCurrentTime();
-        
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         let proyeccionPendientes = 0;
+        
         listaPendiente.forEach(jugador => {
             let attended = 0;
             last4MatchesKeys.forEach(matchKey => {
@@ -573,45 +576,35 @@ function renderSummary() {
             proyeccionPendientes += 10 * fiabilidad * factorTiempo;
         });
 
-        const jugadoresFaltantes = JUGADORES_NECESARIOS - listaSi.length;
-        const jugadoresProyectados = proyeccionPendientes / 10;
+        probabilidad = (listaSi.length * 10) + proyeccionPendientes;
+        const cap = 98;
+        probabilidad = Math.min(probabilidad, cap);
+
+        const decayStart = new Date(matchDate);
+        decayStart.setDate(decayStart.getDate() - 1);
+        decayStart.setHours(14, 0, 0, 0);
+        const decayEnd = new Date(matchDate);
+        let finalDecayActive = false;
+        if (ahora > decayStart) {
+            if (ahora < decayEnd) {
+                probabilidad *= 1 - ((ahora - decayStart) / (decayEnd - decayStart));
+                finalDecayActive = true;
+            } else {
+                probabilidad = 0;
+            }
+        }
         
-        if (jugadoresProyectados < jugadoresFaltantes) {
-            claseColor = "rojo";
-            overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
-                            <p class="recomendacion">🔥 Conviene buscar gente. Abierta la inscripción de amigos.</p>`;
-            showRefuerzosForce = true;
-        } else {
-            probabilidad = (listaSi.length * 10) + proyeccionPendientes;
-            const cap = 98;
-            probabilidad = Math.min(probabilidad, cap);
+        if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
+        else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
+        else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
+        else { 
+            claseColor = "rojo"; 
+            overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
+                            <p class="recomendacion">🔥 La probabilidad es muy baja. Conviene buscar gente.</p>`;
+        }
 
-            const decayStart = new Date(matchDate);
-            decayStart.setDate(decayStart.getDate() - 1);
-            decayStart.setHours(14, 0, 0, 0);
-            const decayEnd = new Date(matchDate);
-            let finalDecayActive = false;
-            if (ahora > decayStart) {
-                if (ahora < decayEnd) {
-                    probabilidad *= 1 - ((ahora - decayStart) / (decayEnd - decayStart));
-                    finalDecayActive = true;
-                } else {
-                    probabilidad = 0;
-                }
-            }
-            
-            if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
-            else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
-            else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
-            else { 
-                claseColor = "rojo"; 
-                overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
-                                <p class="recomendacion">🔥 La probabilidad es muy baja. Conviene buscar gente.</p>`;
-            }
-
-            if (finalDecayActive && !overrideHtml) {
-                recomendacion += "<br><small>⚠️ ¡El tiempo se agota!</small>";
-            }
+        if (finalDecayActive && !overrideHtml) {
+            recomendacion += "<br><small>⚠️ ¡El tiempo se agota!</small>";
         }
     }
     
@@ -627,7 +620,6 @@ function renderSummary() {
     else if (totalConfirmados >= 10) { isRefuerzosOpen = false; }
     else if (loggedInPlayer) {
         const ahora = getCurrentTime();
-        
         let problematicMatches = 0;
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         last4MatchesKeys.forEach(key => {
@@ -636,18 +628,16 @@ function renderSummary() {
             }
         });
         const hourOffset = problematicMatches * 6; 
-
         const activationTime = new Date(matchDate);
         activationTime.setDate(activationTime.getDate() - 1); 
         activationTime.setHours(14 - hourOffset, 0, 0, 0);
-
         if (showRefuerzosForce || ahora >= activationTime) {
             isRefuerzosOpen = true;
         }
     }
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
-    if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml?.includes('Abierta la inscripción')) {
+    if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml?.includes('amigos')) {
         recomendacion = (recomendacion || '') + '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
     }
 
