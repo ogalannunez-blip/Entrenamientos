@@ -79,7 +79,7 @@
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;}
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:left;}
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -162,7 +162,7 @@
 <div id="custom-alert-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="modal-title" class="modal-title"></h3>
-        <p id="modal-message" class="modal-message"></p>
+        <div id="modal-message" class="modal-message"></div>
         <button id="modal-button" class="modal-button">Aceptar</button>
     </div>
 </div>
@@ -207,7 +207,8 @@ let isMatchPendingActivation = false;
 // --- Sistema de Ventanas Modales Personalizadas ---
 function showCustomAlert(title, message) {
     document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').textContent = message;
+    // --- MODIFICADO: Usa innerHTML para renderizar negritas (<strong>) y saltos de línea (<br>) ---
+    document.getElementById('modal-message').innerHTML = message.replace(/\n/g, '<br>');
     document.getElementById('custom-alert-modal').style.display = 'flex';
 }
 document.getElementById('modal-button').addEventListener('click', () => {
@@ -460,7 +461,6 @@ function showPlayerReliability(playerKey) {
     const history = currentDbData.historial || {};
     const playerName = currentDbData.jugadores[playerKey].nombre;
     
-    // Cálculo últimos 4 partidos
     const last4Matches = Object.keys(history).sort().slice(-4);
     let attendedLast4 = 0;
     last4Matches.forEach(matchKey => {
@@ -470,7 +470,6 @@ function showPlayerReliability(playerKey) {
     });
     const reliabilityLast4 = last4Matches.length > 0 ? (attendedLast4 / last4Matches.length * 100).toFixed(0) : 0;
 
-    // Cálculo global
     const allMatches = Object.keys(history);
     let attendedAllTime = 0;
     let answeredAllTime = 0;
@@ -485,10 +484,10 @@ function showPlayerReliability(playerKey) {
     });
     const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
 
-    const message = `ÚLTIMOS 4 PARTIDOS:\n` +
+    const message = `<strong>Últimos 4 Partidos:</strong>\n` +
                   `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` +
                   `Fiabilidad: ${reliabilityLast4}%\n\n` +
-                  `TEMPORADA 25-26:\n` +
+                  `<strong>Temporada 25-26:</strong>\n` +
                   `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` +
                   `Fiabilidad (Global): ${reliabilityAllTime}%`;
                   
@@ -548,7 +547,7 @@ function renderSummary() {
                         <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
-        // --- MODIFICADO: Lógica de riesgo ANULADA Y DEVUELTA A LA NORMALIDAD ---
+        // --- LÓGICA DE RIESGO ANULADA ---
         const ahora = getCurrentTime();
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         let proyeccionPendientes = 0;
@@ -594,7 +593,8 @@ function renderSummary() {
             }
         }
         
-        if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
+        // --- MODIFICADO: El verde solo es para partido confirmado, el 95%+ ahora es ámbar ---
+        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "¡Casi está! Solo falta confirmar."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { 
