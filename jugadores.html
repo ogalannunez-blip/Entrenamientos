@@ -519,6 +519,7 @@ function renderSummary() {
     const JUGADORES_NECESARIOS = 10;
     const listaSi = [], listaPendiente = [], listaNo = [];
     
+    // --- CORREGIDO: Bucle de jugadores para evitar errores ---
     const jugadoresObj = jugadores || {};
     Object.keys(jugadoresObj).forEach(key => {
         const j = {...jugadoresObj[key], key: key};
@@ -577,7 +578,6 @@ function renderSummary() {
         
         if (jugadoresProyectados < jugadoresFaltantes) {
             claseColor = "rojo";
-            // --- MODIFICADO: Mensaje de recomendación para el nuevo estado de riesgo ---
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
                             <p class="recomendacion">🔥 Conviene buscar gente. Abierta la inscripción de amigos.</p>`;
             showRefuerzosForce = true;
@@ -618,8 +618,8 @@ function renderSummary() {
     if (probabilidad) probabilidad = Math.min(100, Math.max(0, probabilidad));
 
     const hayJugadorConBajas = listaSi.some(j => (j.bajas || 0) > 0);
-    if(hayJugadorConBajas) {
-        recomendacion = (overrideHtml ? '' : recomendacion) + '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
+    if(hayJugadorConBajas && recomendacion) {
+        recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
     
     let isRefuerzosOpen = false;
@@ -647,17 +647,8 @@ function renderSummary() {
     }
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
-    if (isRefuerzosOpen && !showRefuerzosForce) {
-        const recHtml = overrideHtml ? document.createElement('div') : document.createElement('p');
-        if (overrideHtml) recHtml.innerHTML = overrideHtml;
-        let existingRec = overrideHtml ? recHtml.querySelector('.recomendacion').innerHTML : recomendacion;
-        existingRec += '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
-        if (overrideHtml) {
-            recHtml.querySelector('.recomendacion').innerHTML = existingRec;
-            overrideHtml = recHtml.innerHTML;
-        } else {
-            recomendacion = existingRec;
-        }
+    if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml?.includes('Abierta la inscripción')) {
+        recomendacion = (recomendacion || '') + '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
     }
 
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
