@@ -75,8 +75,8 @@
         /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
 
-        /* --- MODIFICADO: Ventanas Modales (Alineación y Padding) --- */
-        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
+        /* Ventanas Modales */
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
         .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;}
@@ -251,6 +251,7 @@ document.getElementById('admin-lock-wrapper').addEventListener('click', async ()
         isAdmin = false;
         loggedInPlayer = null;
         document.getElementById('login-info').textContent = 'Identifícate para responder';
+        renderUI();
     } else {
         const pass = await showCustomPrompt('Contraseña de Administrador');
         if (pass === adminPassword) {
@@ -260,8 +261,8 @@ document.getElementById('admin-lock-wrapper').addEventListener('click', async ()
         } else if (pass !== null) { 
             showCustomAlert('Error', 'Contraseña incorrecta.'); 
         }
+        renderUI();
     }
-    renderUI();
 });
 
 document.getElementById('player-login-wrapper').addEventListener('click', async () => {
@@ -290,13 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = snapshot.val();
         if (data && data.jugadores) {
             currentDbData = data;
-            
             const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
-            
             const activationTimeLimit = new Date(nextMatchDate);
             activationTimeLimit.setHours(22, 0, 0, 0); 
-            
             isMatchPendingActivation = ahora > activationTimeLimit;
             renderUI();
         }
@@ -370,7 +368,6 @@ document.addEventListener('DOMContentLoaded', function() {
         Object.keys(jugadores).forEach(key => {
             historialJugadores[key] = {
                 nombre: jugadores[key].nombre,
-                // --- MODIFICADO: Pendiente se guarda como No ---
                 status: jugadores[key].status === 'pendiente' ? 'no' : jugadores[key].status
             };
         });
@@ -415,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newName = document.getElementById('new-player-name').value.trim();
         if (!newName) { return showCustomAlert('Aviso', "Por favor, introduce un nombre."); }
         const newPassword = await showCustomPrompt(`Contraseña para ${newName}`);
-        if (!newPassword) { return; } // El usuario canceló
+        if (!newPassword) { return; }
         const newPlayer = { nombre: newName, password: newPassword, status: "pendiente", bajas: 0 };
         
         database.ref('jugadores').push(newPlayer)
@@ -462,7 +459,6 @@ function showPlayerReliability(playerKey) {
     const history = currentDbData.historial || {};
     const playerName = currentDbData.jugadores[playerKey].nombre;
     
-    // Cálculo últimos 4 partidos
     const last4Matches = Object.keys(history).sort().slice(-4);
     let attendedLast4 = 0;
     last4Matches.forEach(matchKey => {
@@ -472,7 +468,6 @@ function showPlayerReliability(playerKey) {
     });
     const reliabilityLast4 = last4Matches.length > 0 ? (attendedLast4 / last4Matches.length * 100).toFixed(0) : 0;
 
-    // Cálculo global
     const allMatches = Object.keys(history);
     let attendedAllTime = 0;
     let answeredAllTime = 0;
@@ -557,9 +552,7 @@ function renderSummary() {
         listaPendiente.forEach(jugador => {
             let attended = 0;
             last4MatchesKeys.forEach(matchKey => {
-                if (historial[matchKey].jugadores?.[jugador.key]?.status === 'si') {
-                    attended++;
-                }
+                if (historial[matchKey].jugadores?.[jugador.key]?.status === 'si') attended++;
             });
             const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
             const pisoFiabilidad = 0.1;
@@ -579,14 +572,14 @@ function renderSummary() {
             proyeccionPendientes += 10 * fiabilidad * factorTiempo;
         });
 
-        // --- NUEVO: Lógica de riesgo si los pendientes proyectados no son suficientes ---
         const jugadoresFaltantes = JUGADORES_NECESARIOS - listaSi.length;
         const jugadoresProyectados = proyeccionPendientes / 10;
-
+        
         if (jugadoresProyectados < jugadoresFaltantes) {
             claseColor = "rojo";
+            // --- MODIFICADO: Mensaje de recomendación para el nuevo estado de riesgo ---
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
-                            <p class="recomendacion">🔥 La proyección de los pendientes (${jugadoresProyectados.toFixed(1)}) no es suficiente para cubrir los ${jugadoresFaltantes} que faltan.</p>`;
+                            <p class="recomendacion">🔥 Conviene buscar gente. Abierta la inscripción de amigos.</p>`;
             showRefuerzosForce = true;
         } else {
             probabilidad = (listaSi.length * 10) + proyeccionPendientes;
@@ -680,7 +673,6 @@ function renderSummary() {
     resultadoDiv.className = 'resultado ' + claseColor;
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
-    // --- MODIFICADO: Icono SVG azul ---
     const infoIconSvg = `<svg class="info-icon-svg" id="prob-info-icon" viewBox="0 0 16 16"><path d="M7.93,1.602c3.43,0,6.219,2.789,6.219,6.219c0,3.43-2.789,6.219-6.219,6.219c-3.43,0-6.219-2.789-6.219-6.219C1.711,4.391,4.5,1.602,7.93,1.602 M7.93,0C3.551,0,0,3.551,0,7.93c0,4.379,3.551,7.93,7.93,7.93s7.93-3.551,7.93-7.93C15.86,3.551,12.309,0,7.93,0z M8.578,11.969h-1.32V6.883h1.32V11.969z M7.91,5.559c-0.496,0-0.898-0.402-0.898-0.898c0-0.496,0.402-0.898,0.898-0.898s0.898,0.402,0.898,0.898C8.808,5.156,8.406,5.559,7.91,5.559z"/></svg>`;
 
     if (overrideHtml) {
