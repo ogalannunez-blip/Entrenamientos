@@ -31,11 +31,22 @@
         /* Estilos del cuadro de resumen de probabilidad */
         .resultado, #pending-activation{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}
         .probabilidad{font-size:2.5em;font-weight:700;margin:0}
-        .info-icon{cursor:pointer;font-size:0.5em;vertical-align:super;opacity:0.8;}
         .recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}
         .resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}
         .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
         .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
+        
+        /* --- NUEVO: Estilos para el nuevo icono de información SVG --- */
+        .info-icon-svg { 
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 5px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s ease-in-out;
+            fill: currentColor;
+        }
+        .info-icon-svg:hover { opacity: 1; }
         
         /* Icono para borrar refuerzos y jugadores */
         .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
@@ -62,7 +73,7 @@
         /* Secciones de admin */
         #refuerzos-section, #add-player-section, #global-stats-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
         
-        /* --- ESTILOS PARA ICONOS DE ESTADO --- */
+        /* Estilos para iconos de estado */
         .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
         .icon-si{background-color:#28a745}
         .icon-pendiente{background-color:#ffc107;color:#333}
@@ -71,7 +82,7 @@
         /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
 
-        /* --- ESTILOS PARA MÓVILES --- */
+        /* Estilos para móviles */
         @media screen and (max-width:600px){
             body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
             table,thead,tbody,th,td,tr{display:block}
@@ -79,7 +90,7 @@
             tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
             td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
             td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
-            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Jugados"}td:nth-of-type(4):before{content:"Bajas"}td:nth-of-type(5):before{content:"Fiabilidad"}td:nth-of-type(6):before{content:"Acción"}
+            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Bajas"}td:nth-of-type(4):before{content:"Fiabilidad"}td:nth-of-type(5):before{content:"Acción"}
             .status-radio{justify-content:flex-end}input[type=number]{width:70px}
             .admin-view .admin-only{display:block !important;}
         }
@@ -152,8 +163,7 @@ let adminPassword = "";
 let isAdmin = false;
 let loggedInPlayer = null;
 let currentDbData = null;
-let simulatedTime = null; // Para el modo test
-// --- NUEVO: Variable para controlar si el partido está pendiente de ser activado por el admin ---
+let simulatedTime = null; 
 let isMatchPendingActivation = false;
 
 // --- LÓGICA DE LOGIN ---
@@ -180,7 +190,6 @@ document.getElementById('player-login').addEventListener('click', () => {
     const accessCode = prompt('Introduce tu código de acceso:');
     if (!accessCode) return;
     
-    // --- MODIFICADO: Búsqueda de jugador en un objeto en lugar de un array ---
     const jugadores = currentDbData.jugadores;
     const playerKey = Object.keys(jugadores).find(key => jugadores[key].password === accessCode);
 
@@ -203,31 +212,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data && data.jugadores) {
             currentDbData = data;
             
-            // --- MODIFICADO: Lógica de activación manual del partido ---
             const ahora = getCurrentTime();
             const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
             
-            // La "hora de reseteo" ahora es solo la hora a partir de la cual el admin puede activar el siguiente partido.
             const activationTimeLimit = new Date(nextMatchDate);
             activationTimeLimit.setHours(22, 0, 0, 0); 
             
-            if (ahora > activationTimeLimit) {
-                isMatchPendingActivation = true;
-            } else {
-                isMatchPendingActivation = false;
-            }
+            isMatchPendingActivation = ahora > activationTimeLimit;
             renderUI();
         }
     });
 
     // Delegación de eventos para la tabla
     document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
-        const target = e.target;
-        const fila = target.closest('tr');
+        const fila = e.target.closest('tr');
         if (!fila) return;
+        
         const playerKey = fila.dataset.key;
+        if (!playerKey) return;
 
-        if (target.classList.contains('delete-player-btn')) {
+        if (e.target.classList.contains('delete-player-btn')) {
             const jugador = currentDbData.jugadores[playerKey];
             if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
                 database.ref('jugadores/' + playerKey).remove()
@@ -235,8 +239,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(error => alert("Error al eliminar: " + error.message));
             }
         }
-        // --- NUEVO: Pop-up de fiabilidad al hacer clic en el nombre ---
-        else if (target.classList.contains('player-name')) {
+        // --- CORREGIDO: Ahora el 'target' es la celda 'td', no un elemento dentro de ella ---
+        else if (e.target.classList.contains('player-name')) {
             const history = currentDbData.historial || {};
             const last4Matches = Object.keys(history).sort().slice(-4);
             let attended = 0;
@@ -258,61 +262,72 @@ document.addEventListener('DOMContentLoaded', function() {
         const target = e.target;
 
         if (target.classList.contains('bajas')) {
-            const value = parseInt(target.value, 10);
-            database.ref(`jugadores/${playerKey}/bajas`).set(value);
+            database.ref(`jugadores/${playerKey}/bajas`).set(parseInt(target.value, 10));
         } else if (target.name.startsWith('status-')) {
              database.ref(`jugadores/${playerKey}/status`).set(target.value);
         }
     });
 
-    // Listeners del Modo Test
+    // --- CORREGIDO: Listeners del Modo Test que ahora funcionan ---
     document.getElementById('apply-test-date').addEventListener('click', () => {
         const dateValue = document.getElementById('test-date').value;
         simulatedTime = dateValue ? new Date(dateValue) : null;
-        // Forzar re-evaluación de la lógica de tiempo
-        database.ref().trigger('value'); 
+        const ahora = getCurrentTime();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const activationTimeLimit = new Date(nextMatchDate);
+        activationTimeLimit.setHours(22, 0, 0, 0); 
+        isMatchPendingActivation = (ahora > activationTimeLimit);
+        renderUI();
     });
     document.getElementById('reset-test-date').addEventListener('click', () => {
         simulatedTime = null;
         document.getElementById('test-date').value = '';
-        database.ref().trigger('value');
+        const ahora = getCurrentTime();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const activationTimeLimit = new Date(nextMatchDate);
+        activationTimeLimit.setHours(22, 0, 0, 0); 
+        isMatchPendingActivation = (ahora > activationTimeLimit);
+        renderUI();
     });
 
-    // --- NUEVO: Listener para el botón de archivar y activar ---
     document.getElementById('archive-button').addEventListener('click', async () => {
         if (!isAdmin || !isMatchPendingActivation) return;
         if (!confirm('¿Estás seguro de que quieres archivar este partido y activar el siguiente?')) return;
 
-        const { jugadores, refuerzos, historial, matchInfo } = currentDbData;
-        const matchDateISO = new Date(matchInfo.nextMatchDate).toISOString();
+        const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
+        // Usamos un formato de clave simple y válido para Firebase
+        const matchKey = oldMatchDate.toISOString().replace(/\..+/, '').replace(/[:T]/g, '-');
 
         const listaSi = Object.values(jugadores).filter(j => j.status === 'si');
         const listaRefuerzos = refuerzos ? Object.values(refuerzos) : [];
         const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
+        // Preparamos los datos del historial con la estructura simplificada
+        const historialJugadores = {};
+        Object.keys(jugadores).forEach(key => {
+            historialJugadores[key] = {
+                nombre: jugadores[key].nombre,
+                status: jugadores[key].status
+            };
+        });
+
         const archiveData = {
-            jugadores: jugadores,
+            jugadores: historialJugadores,
             refuerzos: refuerzos || null,
             cancelado: totalConfirmados < 10,
             con_extras: totalConfirmados >= 10 && listaSi.length < 10,
         };
         
-        // Preparar la actualización masiva
         const updates = {};
-        // 1. Guardar en el historial
-        updates[`/historial/${matchDateISO}`] = archiveData;
+        updates[`/historial/${matchKey}`] = archiveData;
         
-        // 2. Resetear estados de jugadores
         Object.keys(jugadores).forEach(key => {
             updates[`/jugadores/${key}/status`] = 'pendiente';
         });
 
-        // 3. Limpiar refuerzos
         updates['/refuerzos'] = null;
-
-        // 4. Establecer nueva fecha de partido
-        const newMatchDate = getNextWednesday();
-        updates['/matchInfo/nextMatchDate'] = newMatchDate.toISOString();
+        updates['/matchInfo/nextMatchDate'] = getNextWednesday(true).toISOString();
 
         try {
             await database.ref().update(updates);
@@ -322,7 +337,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listener para añadir refuerzos
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
@@ -334,7 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // --- MODIFICADO: Añadir jugador a un objeto ---
     document.getElementById('add-player-btn').addEventListener('click', () => {
         const newName = document.getElementById('new-player-name').value.trim();
         if (!newName) { return alert("Por favor, introduce un nombre."); }
@@ -350,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => alert("Error al añadir jugador: " + error.message));
     });
     
-    // Listener para borrar refuerzos
+    // Listener principal del contenedor para borrar refuerzos y para el icono de info
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-refuerzo')) {
             const refKey = e.target.dataset.key;
@@ -363,8 +376,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Solo el admin o la persona que añadió el refuerzo puede borrarlo.');
             }
         }
-        // --- NUEVO: Listener para el icono de información de probabilidad ---
-        if (e.target.id === 'prob-info-icon') {
+        // --- CORREGIDO: Listener más robusto para el icono de información ---
+        if (e.target.closest('#prob-info-icon')) {
             alert('Probabilidad basada en los datos históricos de los últimos cuatro partidos.');
         }
     });
@@ -378,7 +391,6 @@ function renderUI() {
     if (!currentDbData) return;
     document.getElementById('main-content').style.display = 'block';
 
-    // --- NUEVO: Mostrar mensaje de activación pendiente o el contenido normal ---
     if (isMatchPendingActivation && !isAdmin) {
         document.getElementById('pending-activation').style.display = 'block';
         document.getElementById('resultado').style.display = 'none';
@@ -394,7 +406,6 @@ function renderUI() {
 }
 
 function renderSummary() {
-    // --- MODIFICADO: Ahora 'jugadores' es un objeto ---
     const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
     const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
@@ -402,10 +413,9 @@ function renderSummary() {
     const JUGADORES_NECESARIOS = 10;
     const listaSi = [], listaPendiente = [], listaNo = [];
     
-    // --- MODIFICADO: Iterar sobre un objeto ---
     const jugadoresObj = jugadores || {};
     Object.keys(jugadoresObj).forEach(key => {
-        const j = {...jugadoresObj[key], key: key}; // Añadimos la key al objeto para fácil acceso
+        const j = {...jugadoresObj[key], key: key};
         if (j.status === 'si') listaSi.push(j);
         else if (j.status === 'no') listaNo.push(j);
         else listaPendiente.push(j);
@@ -432,7 +442,6 @@ function renderSummary() {
         const ahora = getCurrentTime();
         let proyeccionPendientes = 0;
         
-        // --- MODIFICADO: Cálculo de fiabilidad basado en el historial ---
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
 
         listaPendiente.forEach(jugador => {
@@ -445,11 +454,9 @@ function renderSummary() {
             });
             const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
             
-            // Usamos un piso mínimo de fiabilidad para dar una oportunidad a jugadores nuevos o con mala racha
-            const pisoFiabilidad = 0.1; // 10% de fiabilidad base
+            const pisoFiabilidad = 0.1;
             const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
 
-            // La lógica de factor de tiempo se mantiene
             const mondayStart = new Date(matchDate);
             mondayStart.setDate(mondayStart.getDate() - 2);
             mondayStart.setHours(0, 0, 0, 0);
@@ -483,7 +490,6 @@ function renderSummary() {
             }
         }
         
-        // --- MODIFICADO: Nuevos mensajes para los estados amarillo y rojo ---
         if (probabilidad >= 95) { claseColor = "verde"; recomendacion = ""; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
@@ -501,14 +507,12 @@ function renderSummary() {
         recomendacion = (overrideHtml ? '' : recomendacion) + '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
     
-    // --- NUEVO: Lógica de apertura dinámica para refuerzos ---
     let isRefuerzosOpen = false;
     if (isAdmin) { isRefuerzosOpen = true; }
     else if (totalConfirmados >= 10) { isRefuerzosOpen = false; }
     else if (loggedInPlayer) {
         const ahora = getCurrentTime();
         
-        // Calcular offset
         let problematicMatches = 0;
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         last4MatchesKeys.forEach(key => {
@@ -517,11 +521,11 @@ function renderSummary() {
                 problematicMatches++;
             }
         });
-        const hourOffset = problematicMatches * 6; // 6 horas por cada partido problemático
+        const hourOffset = problematicMatches * 6; 
 
         const activationTime = new Date(matchDate);
-        activationTime.setDate(activationTime.getDate() - 1); // Martes
-        activationTime.setHours(14 - hourOffset, 0, 0, 0); // 14:00 menos el offset
+        activationTime.setDate(activationTime.getDate() - 1); 
+        activationTime.setHours(14 - hourOffset, 0, 0, 0);
 
         if (showRefuerzosForce || ahora >= activationTime) {
             isRefuerzosOpen = true;
@@ -546,11 +550,13 @@ function renderSummary() {
     resultadoDiv.className = 'resultado ' + claseColor;
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
+    // --- MEJORADO: Icono SVG y movido al final ---
+    const infoIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.294.294 0 0 1-.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47L8 8.411v.002zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+
     if (overrideHtml) {
         resultadoDiv.innerHTML = overrideHtml + listaHtml;
     } else {
-        // --- MODIFICADO: Añadido el icono de información ---
-        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span class="info-icon" id="prob-info-icon" title="Más información">ℹ️</span> <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar</span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar <span id="prob-info-icon" class="info-icon-svg" title="Más información">${infoIconSvg}</span></span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
     }
 }
 
@@ -558,7 +564,6 @@ function renderTable() {
     const tablaBody = document.querySelector("#tabla-jugadores tbody");
     tablaBody.innerHTML = '';
     
-    // --- MODIFICADO: Iterar sobre objeto de jugadores y calcular fiabilidad sobre la marcha ---
     const jugadores = currentDbData.jugadores || {};
     const history = currentDbData.historial || {};
     const last4Matches = Object.keys(history).sort().slice(-4);
@@ -577,8 +582,6 @@ function renderTable() {
         const fiabilidad = last4Matches.length > 0 ? `${(attended / last4Matches.length * 100).toFixed(0)}%` : 'N/A';
         const status = jugador.status || 'pendiente';
         
-        // --- MODIFICADO: Usar 'data-key' en lugar de 'data-index' ---
-        // --- MODIFICADO: La columna 'Jugados' se ha quitado, la fiabilidad la sustituye ---
         const fila = `
             <tr data-key="${key}">
                 <td class="player-name">${jugador.nombre}</td>
@@ -604,7 +607,6 @@ function applyVisibility() {
         timeDisplay.textContent = `Hora del sistema: ${now.toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })} ${simulatedTime ? '(SIMULADA)' : ''}`;
     }
     
-    // --- NUEVO: Visibilidad del botón de archivar ---
     document.getElementById('archive-button').style.display = (isAdmin && isMatchPendingActivation) ? 'block' : 'none';
     
     const tablaVisible = (isAdmin || loggedInPlayer) && !isMatchPendingActivation;
@@ -618,7 +620,7 @@ function applyVisibility() {
         if (loggedInPlayer && !isAdmin) {
             fila.style.display = isPlayerRow ? '' : 'none';
         } else {
-            fila.style.display = ''; // Asegurarse de que el admin ve todas las filas
+            fila.style.display = '';
         }
         fila.querySelectorAll('input').forEach(input => {
              input.disabled = !(isAdmin || isPlayerRow);
@@ -626,12 +628,12 @@ function applyVisibility() {
     });
 }
 
-function getNextWednesday() {
-    const d = new Date(); // Usar la hora real para calcular el siguiente miércoles, no la simulada
+function getNextWednesday(forceNextWeek = false) {
+    const d = new Date();
     const today = d.getDay();
     let offset = (3 - today + 7) % 7;
-    if (offset === 0 && d.getHours() >= 22) { // Si es miércoles post-partido, calcular para la semana que viene
-        offset = 7;
+    if (forceNextWeek || (offset === 0 && d.getHours() >= 22)) {
+        offset = offset === 0 ? 7 : offset + 7;
     }
     const newDate = new Date(d);
     newDate.setDate(d.getDate() + offset);
