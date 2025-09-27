@@ -12,7 +12,8 @@
         /* Encabezados */
         h1,h2{text-align:center;color:#1a73e8}
         h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
-        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}
+        .date-header{display:flex;justify-content:center;align-items:center;gap:15px;}
+        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px; flex-grow: 1;}
         
         /* Iconos y etiquetas de Login */
         .login-controls{display:flex;justify-content:center;gap:30px;align-items:flex-start;}
@@ -43,6 +44,11 @@
         .info-icon-svg {display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;opacity:1;transition:transform 0.2s ease-in-out;fill:#1a73e8;height:18px;width:18px;}
         .info-icon-svg:hover {transform:scale(1.1);}
         
+        /* --- NUEVO: Estilos para el botón de WhatsApp --- */
+        #whatsapp-button{background-color:#25D366;color:white;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:transform .2s;}
+        #whatsapp-button:hover{transform:scale(1.1);}
+        #whatsapp-button svg{width:24px;height:24px;fill:white;}
+
         /* Iconos de acción */
         .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
         .delete-refuerzo{margin-left:auto;}
@@ -79,7 +85,8 @@
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:left;}
+        /* --- MODIFICADO: Texto de la ventana modal centrado --- */
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;}
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -119,7 +126,13 @@
         </div>
     </h1>
     <div id="login-info">Identifícate para responder</div>
-    <h2 id="match-date-title">Cargando...</h2>
+    
+    <div class="date-header">
+        <h2 id="match-date-title">Cargando...</h2>
+        <a id="whatsapp-button" title="Abrir grupo de WhatsApp">
+            <svg viewBox="0 0 24 24"><path d="M16.75,13.96C17,14.26 17.25,14.81 17.25,15.41C17.25,16.5 16.25,17.45 15.2,17.5C14.25,17.55 12.05,16.8 10.1,15.1C7.8,13.05 6.85,10.25 6.8,9.15C6.75,8.25 7.5,7.5 7.8,7.2C8.05,6.95 8.3,6.9 8.55,6.9C8.8,6.9 9,6.95 9.15,7.2C9.3,7.45 9.5,7.85 9.55,8C9.6,8.15 9.65,8.3 9.5,8.55C9.35,8.8 8.95,9.2 8.7,9.45C8.55,9.6 8.4,9.75 8.55,10.05C8.7,10.35 9.25,11.25 10.2,12.2C11.15,13.15 12.05,13.65 12.35,13.8C12.65,13.95 12.8,13.8 13,13.65C13.25,13.4 13.65,13 13.8,12.85C13.95,12.7 14.1,12.75 14.3,12.8C14.5,12.85 15.3,13.25 15.5,13.35C15.7,13.45 15.8,13.5 15.85,13.6C15.9,13.7 15.8,13.8 15.7,13.9C15.6,14 15.35,14.25 15.35,14.25L15.35,14.25Z M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22C13.65,22 15.25,21.55 16.65,20.75L21,22L19.25,17.75C20.3,16.25 21,14.25 21,12A10,10 0 0,0 12,2Z" /></svg>
+        </a>
+    </div>
 
     <div id="main-content" style="display: none;">
         <div id="pending-activation" style="display: none;">
@@ -196,7 +209,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// --- VARIABLES GLOBALES DE ESTADO ---
+// --- VARIABLES GLOBALES Y CONFIGURACIÓN ---
+// --- ¡IMPORTANTE! Pega aquí tu enlace de invitación al grupo de WhatsApp ---
+const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/HkJ7ha85RvsHl4URkdwFcd?mode=ems_copy_t';
+
 let adminPassword = "";
 let isAdmin = false;
 let loggedInPlayer = null;
@@ -207,7 +223,6 @@ let isMatchPendingActivation = false;
 // --- Sistema de Ventanas Modales Personalizadas ---
 function showCustomAlert(title, message) {
     document.getElementById('modal-title').textContent = title;
-    // --- MODIFICADO: Usa innerHTML para renderizar negritas (<strong>) y saltos de línea (<br>) ---
     document.getElementById('modal-message').innerHTML = message.replace(/\n/g, '<br>');
     document.getElementById('custom-alert-modal').style.display = 'flex';
 }
@@ -439,7 +454,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         else if (e.target.closest('#prob-info-icon')) {
-            showCustomAlert('Información', 'Probabilidad basada en los datos históricos de los últimos cuatro partidos.');
+            const history = currentDbData.historial || {};
+            const allMatches = Object.values(history);
+            const canceladosCount = allMatches.filter(m => m.cancelado).length;
+            const conExtrasCount = allMatches.filter(m => m.con_extras).length;
+            const message = `Probabilidad basada en los datos históricos de los últimos cuatro partidos.\n\n` +
+                          `ESTADÍSTICAS TEMPORADA 25-26:\n` +
+                          `Partidos cancelados: ${canceladosCount}\n` +
+                          `Partidos jugados gracias a amigos: ${conExtrasCount}`;
+            showCustomAlert('Información del Partido', message);
         }
         else if (e.target.classList.contains('summary-player-name')) {
             const playerKey = e.target.dataset.key;
@@ -448,13 +471,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // --- NUEVO: Listener para el botón de WhatsApp ---
+    document.getElementById('whatsapp-button').addEventListener('click', () => {
+        if (WHATSAPP_GROUP_LINK.includes('TU_ENLACE_AQUI')) {
+            showCustomAlert('Aviso', 'El enlace de WhatsApp aún no ha sido configurado en el script.');
+        } else {
+            window.open(WHATSAPP_GROUP_LINK, '_blank');
+        }
+    });
 });
 
 
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
-// --- MODIFICADO: Cambios en el texto del pop-up de fiabilidad ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
@@ -547,7 +578,6 @@ function renderSummary() {
                         <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
-        // --- LÓGICA DE RIESGO ANULADA ---
         const ahora = getCurrentTime();
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         let proyeccionPendientes = 0;
@@ -593,7 +623,6 @@ function renderSummary() {
             }
         }
         
-        // --- MODIFICADO: El verde solo es para partido confirmado, el 95%+ ahora es ámbar ---
         if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "¡Casi está! Solo falta confirmar."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
