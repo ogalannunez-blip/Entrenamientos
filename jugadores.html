@@ -21,16 +21,13 @@
         .player-name{cursor:pointer; font-weight: bold;}
         .player-name:hover{color:#1a73e8;}
 
-        /* --- NUEVO: Estilo para los nombres clicables en el resumen --- */
         .summary-player-name {
             cursor: pointer;
             text-decoration: underline;
             text-decoration-style: dotted;
             text-decoration-thickness: 1px;
         }
-        .summary-player-name:hover {
-            color: #1a73e8;
-        }
+        .summary-player-name:hover { color: #1a73e8; }
         
         /* Estilos para campos de entrada */
         input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
@@ -53,16 +50,14 @@
             vertical-align: middle;
             margin-left: 8px;
             cursor: pointer;
-            opacity: 0.9;
+            opacity: 0.8;
             transition: opacity 0.2s ease-in-out;
-            fill: #fff;
-            stroke: #333;
-            stroke-width: 1px;
+            fill: currentColor;
             height: 18px;
             width: 18px;
         }
-        .info-icon-svg:hover { opacity: 1; fill: #eee; stroke: #000; }
-        .ambar .info-icon-svg { fill: #333; stroke: #fff; } /* Icono visible en fondo ámbar */
+        .info-icon-svg:hover { opacity: 1; }
+        .ambar .info-icon-svg { fill: #333; }
         
         /* Icono para borrar refuerzos y jugadores */
         .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
@@ -97,6 +92,14 @@
         
         /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
+
+        /* --- NUEVO: Estilos para la Ventana Modal Personalizada --- */
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:1000}
+        .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
+        .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;}
+        .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
+        .modal-button:hover{background-color:#1558b8}
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
@@ -157,6 +160,14 @@
     </div>
 </div>
 
+<div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modal-title" class="modal-title"></h3>
+        <p id="modal-message" class="modal-message"></p>
+        <button id="modal-button" class="modal-button">Aceptar</button>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -182,6 +193,22 @@ let currentDbData = null;
 let simulatedTime = null; 
 let isMatchPendingActivation = false;
 
+// --- NUEVO: Función para mostrar la ventana modal personalizada ---
+function showCustomAlert(title, message) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-message').textContent = message;
+    document.getElementById('custom-alert-modal').style.display = 'flex';
+}
+document.getElementById('modal-button').addEventListener('click', () => {
+    document.getElementById('custom-alert-modal').style.display = 'none';
+});
+document.getElementById('custom-alert-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'custom-alert-modal') {
+        document.getElementById('custom-alert-modal').style.display = 'none';
+    }
+});
+
+
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
@@ -196,7 +223,7 @@ document.getElementById('admin-lock').addEventListener('click', () => {
             isAdmin = true;
             loggedInPlayer = null;
             document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
-        } else if (pass) { alert('Contraseña incorrecta.'); }
+        } else if (pass) { showCustomAlert('Error', 'Contraseña incorrecta.'); }
     }
     renderUI();
 });
@@ -214,7 +241,7 @@ document.getElementById('player-login').addEventListener('click', () => {
         isAdmin = false;
         document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
     } else {
-        alert('Código de acceso no reconocido.');
+        showCustomAlert('Error', 'Código de acceso no reconocido.');
     }
     renderUI();
 });
@@ -251,8 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const jugador = currentDbData.jugadores[playerKey];
             if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
                 database.ref('jugadores/' + playerKey).remove()
-                    .then(() => alert(`${jugador.nombre} ha sido eliminado.`))
-                    .catch(error => alert("Error al eliminar: " + error.message));
+                    .then(() => showCustomAlert('Información', `${jugador.nombre} ha sido eliminado.`))
+                    .catch(error => showCustomAlert('Error', "Error al eliminar: " + error.message));
             }
         }
         else if (e.target.classList.contains('player-name')) {
@@ -334,9 +361,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             await database.ref().update(updates);
-            alert('Partido archivado y nuevo partido activado correctamente.');
+            showCustomAlert('Información', 'Partido archivado y nuevo partido activado correctamente.');
         } catch (error) {
-            alert('Error al archivar el partido: ' + error.message);
+            showCustomAlert('Error', 'Error al archivar el partido: ' + error.message);
         }
     });
 
@@ -347,44 +374,42 @@ document.addEventListener('DOMContentLoaded', function() {
             database.ref('refuerzos').push({ nombre: nombreRefuerzo, anadidoPor });
             document.getElementById('refuerzo-nombre').value = '';
         } else {
-            alert("Debes identificarte para añadir un refuerzo.");
+            showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo.");
         }
     });
     
     document.getElementById('add-player-btn').addEventListener('click', () => {
         const newName = document.getElementById('new-player-name').value.trim();
-        if (!newName) { return alert("Por favor, introduce un nombre."); }
+        if (!newName) { return showCustomAlert('Aviso', "Por favor, introduce un nombre."); }
         const newPassword = prompt(`Introduce la contraseña para ${newName}:`);
-        if (!newPassword) { return alert("La contraseña no puede estar vacía."); }
+        if (!newPassword) { return showCustomAlert('Aviso', "La contraseña no puede estar vacía."); }
         const newPlayer = { nombre: newName, password: newPassword, status: "pendiente", bajas: 0 };
         
         database.ref('jugadores').push(newPlayer)
             .then(() => {
-                alert(`${newName} ha sido añadido a la plantilla.`);
+                showCustomAlert('Información', `${newName} ha sido añadido a la plantilla.`);
                 document.getElementById('new-player-name').value = '';
             })
-            .catch(error => alert("Error al añadir jugador: " + error.message));
+            .catch(error => showCustomAlert('Error', "Error al añadir jugador: " + error.message));
     });
     
     // Listener principal del contenedor para varios eventos
     document.querySelector('.container').addEventListener('click', function(e) {
-        // Borrar refuerzo
         if (e.target.closest('.delete-refuerzo')) {
-            const refKey = e.target.closest('.delete-refuerzo').dataset.key;
-            const refOwner = e.target.closest('.delete-refuerzo').dataset.owner;
+            const refuerzoElement = e.target.closest('.delete-refuerzo');
+            const refKey = refuerzoElement.dataset.key;
+            const refOwner = refuerzoElement.dataset.owner;
             if (isAdmin || (loggedInPlayer && loggedInPlayer.nombre === refOwner)) {
                 if (refKey && confirm('¿Quitar a este refuerzo de la lista?')) {
                     database.ref('refuerzos/' + refKey).remove();
                 }
             } else {
-                alert('Solo el admin o la persona que añadió el refuerzo puede borrarlo.');
+                showCustomAlert('Aviso', 'Solo el admin o la persona que añadió el refuerzo puede borrarlo.');
             }
         }
-        // Icono de información
         else if (e.target.closest('#prob-info-icon')) {
-            alert('Probabilidad basada en los datos históricos de los últimos cuatro partidos.');
+            showCustomAlert('Información', 'Probabilidad basada en los datos históricos de los últimos cuatro partidos.');
         }
-        // --- NUEVO: Click en nombre de jugador en el resumen ---
         else if (e.target.classList.contains('summary-player-name')) {
             const playerKey = e.target.dataset.key;
             if (playerKey) {
@@ -398,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
-// --- NUEVA FUNCIÓN: Muestra la fiabilidad de un jugador ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
@@ -412,7 +436,8 @@ function showPlayerReliability(playerKey) {
         }
     });
     const reliabilityPercentage = last4Matches.length > 0 ? (attended / last4Matches.length * 100).toFixed(0) : 0;
-    alert(`Fiabilidad de ${currentDbData.jugadores[playerKey].nombre} (últimos ${last4Matches.length} partidos):\n\nAsistencias: ${attended} de ${last4Matches.length}\nPorcentaje: ${reliabilityPercentage}%`);
+    const message = `Asistencias: ${attended} de ${last4Matches.length}\nPorcentaje: ${reliabilityPercentage}%`;
+    showCustomAlert(`Fiabilidad de ${currentDbData.jugadores[playerKey].nombre}`, message);
 }
 
 // --- FUNCIONES DE RENDERIZADO ---
@@ -566,7 +591,6 @@ function renderSummary() {
         recomendacion += '<br><small style="font-style: italic;">👥 Ya está abierta la inscripción de amigos.</small>';
     }
 
-    // --- MEJORADO: Nombres clicables en el resumen ---
     const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
     const refuerzosHtml = listaRefuerzos.map(([key, ref]) => {
         const puedeBorrar = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
@@ -580,12 +604,13 @@ function renderSummary() {
     resultadoDiv.className = 'resultado ' + claseColor;
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
-    const infoIconSvg = `<svg class="info-icon-svg" id="prob-info-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8.93 6.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.294.294 0 0 1-.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47l-.45-.083v-.002zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+    // --- MEJORADO: Icono SVG sólido y limpio ---
+    const infoIconSvg = `<svg viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47a.5.5 0 0 1-.52-.43c.03-.533.57-1.037.94-1.037.525 0 .98.346 1.17.594l.088-.416c-.287-.346-.92-.598-1.465-.598C9.555 5.12 9.276 5 9 5c-.793 0-1.442.234-1.784.627-.18.21-.344.46-.478.756-.134.296-.196.635-.196.994 0 .343.058.662.164.95.105.286.255.53.44.743.187.213.432.38.71.504l.26.108.016.007.016.006.015.006c.01 0 .02.002.03.003l.026.009.022.007c.022.007.045.014.068.02.045.013.09.026.136.038.046.012.093.023.14.033l.028.006c.26.056.49.096.677.12.188.024.36.037.5.037.284 0 .54-.034.74-.105.203-.07.356-.182.46-.34.103-.157.155-.35.155-.572 0-.22-.047-.41-.14-.565-.093-.155-.24-.267-.44-.33l-.26-.086zM8 4.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
 
     if (overrideHtml) {
         resultadoDiv.innerHTML = overrideHtml + listaHtml;
     } else {
-        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar ${infoIconSvg}</span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em; opacity: 0.8; font-weight: 400;">probabilidad de jugar <span class="info-icon-svg" id="prob-info-icon" title="Más información">${infoIconSvg}</span></span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
     }
 }
 
