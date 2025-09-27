@@ -14,7 +14,7 @@
         h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
         h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px}
         
-        /* --- MODIFICADO: Estilos para iconos y etiquetas de Login --- */
+        /* Iconos y etiquetas de Login */
         .login-controls{display:flex;justify-content:center;gap:30px;align-items:flex-start;}
         .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
         .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
@@ -75,12 +75,11 @@
         /* Modo Test */
         #admin-test-section button{padding:5px 10px;margin-left:5px;}
 
-        /* Ventanas Modales */
-        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:center;z-index:1000}
+        /* --- MODIFICADO: Ventanas Modales (Alineación y Padding) --- */
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
         .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;}
-        /* --- NUEVO: Estilos para el modal con input --- */
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -218,7 +217,6 @@ document.getElementById('custom-alert-modal').addEventListener('click', (e) => {
     if (e.target.id === 'custom-alert-modal') document.getElementById('custom-alert-modal').style.display = 'none';
 });
 
-// --- NUEVO: Reemplazo del prompt() nativo por una ventana modal ---
 function showCustomPrompt(title) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-prompt-modal');
@@ -245,7 +243,7 @@ function showCustomPrompt(title) {
     });
 }
 
-// --- LÓGICA DE LOGIN (MODIFICADA para usar el nuevo prompt) ---
+// --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
@@ -413,11 +411,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    document.getElementById('add-player-btn').addEventListener('click', () => {
+    document.getElementById('add-player-btn').addEventListener('click', async () => {
         const newName = document.getElementById('new-player-name').value.trim();
         if (!newName) { return showCustomAlert('Aviso', "Por favor, introduce un nombre."); }
-        const newPassword = prompt(`Introduce la contraseña para ${newName}:`);
-        if (!newPassword) { return showCustomAlert('Aviso', "La contraseña no puede estar vacía."); }
+        const newPassword = await showCustomPrompt(`Contraseña para ${newName}`);
+        if (!newPassword) { return; } // El usuario canceló
         const newPlayer = { nombre: newName, password: newPassword, status: "pendiente", bajas: 0 };
         
         database.ref('jugadores').push(newPlayer)
@@ -458,7 +456,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
-// --- MODIFICADO: Muestra fiabilidad reciente Y global ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
@@ -527,11 +524,12 @@ function renderSummary() {
     const JUGADORES_NECESARIOS = 10;
     const listaSi = [], listaPendiente = [], listaNo = [];
     
-    Object.values(jugadores || {}).forEach((player, index) => {
-        const playerWithKey = {...player, key: Object.keys(jugadores)[index]};
-        if (player.status === 'si') listaSi.push(playerWithKey);
-        else if (player.status === 'no') listaNo.push(playerWithKey);
-        else listaPendiente.push(playerWithKey);
+    const jugadoresObj = jugadores || {};
+    Object.keys(jugadoresObj).forEach(key => {
+        const j = {...jugadoresObj[key], key: key};
+        if (j.status === 'si') listaSi.push(j);
+        else if (j.status === 'no') listaNo.push(j);
+        else listaPendiente.push(j);
     });
 
     const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
@@ -548,54 +546,50 @@ function renderSummary() {
     } else if (maximoPosiblePlantilla < JUGADORES_NECESARIOS) {
         claseColor = "rojo";
         const faltan = JUGADORES_NECESARIOS - totalConfirmados;
-        overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en riesgo</p>
+        overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
                         <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
         const ahora = getCurrentTime();
-        let proyeccionPendientes = 0;
         
-        // --- NUEVO: Lógica de riesgo si los pendientes no pueden alcanzar el 98% ---
-        const probSi = listaSi.length * 10;
-        const probNecesariaPendientes = 98 - probSi;
-        const maxProbPosiblePendientes = listaPendiente.length * 10;
+        const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
+        let proyeccionPendientes = 0;
+        listaPendiente.forEach(jugador => {
+            let attended = 0;
+            last4MatchesKeys.forEach(matchKey => {
+                if (historial[matchKey].jugadores?.[jugador.key]?.status === 'si') {
+                    attended++;
+                }
+            });
+            const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
+            const pisoFiabilidad = 0.1;
+            const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
 
-        if (maxProbPosiblePendientes < probNecesariaPendientes) {
+            const mondayStart = new Date(matchDate);
+            mondayStart.setDate(mondayStart.getDate() - 2);
+            mondayStart.setHours(0, 0, 0, 0);
+            const tuesdayEnd = new Date(mondayStart);
+            tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+            tuesdayEnd.setHours(14, 0, 0, 0);
+            let factorTiempo = 1.0;
+            if (ahora > mondayStart) {
+                if (ahora < tuesdayEnd) factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
+                else factorTiempo = 0.33;
+            }
+            proyeccionPendientes += 10 * fiabilidad * factorTiempo;
+        });
+
+        // --- NUEVO: Lógica de riesgo si los pendientes proyectados no son suficientes ---
+        const jugadoresFaltantes = JUGADORES_NECESARIOS - listaSi.length;
+        const jugadoresProyectados = proyeccionPendientes / 10;
+
+        if (jugadoresProyectados < jugadoresFaltantes) {
             claseColor = "rojo";
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
-                            <p class="recomendacion">🔥 Imposible alcanzar el 98% solo con los pendientes. Conviene buscar gente.</p>`;
+                            <p class="recomendacion">🔥 La proyección de los pendientes (${jugadoresProyectados.toFixed(1)}) no es suficiente para cubrir los ${jugadoresFaltantes} que faltan.</p>`;
             showRefuerzosForce = true;
         } else {
-            const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
-
-            listaPendiente.forEach(jugador => {
-                let attended = 0;
-                last4MatchesKeys.forEach(matchKey => {
-                    if (historial[matchKey].jugadores?.[jugador.key]?.status === 'si') {
-                        attended++;
-                    }
-                });
-                const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
-                
-                const pisoFiabilidad = 0.1;
-                const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
-
-                const mondayStart = new Date(matchDate);
-                mondayStart.setDate(mondayStart.getDate() - 2);
-                mondayStart.setHours(0, 0, 0, 0);
-                const tuesdayEnd = new Date(mondayStart);
-                tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
-                tuesdayEnd.setHours(14, 0, 0, 0);
-                let factorTiempo = 1.0;
-                if (ahora > mondayStart) {
-                    if (ahora < tuesdayEnd) factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
-                    else factorTiempo = 0.33;
-                }
-                proyeccionPendientes += 10 * fiabilidad * factorTiempo;
-            });
-            
-            probabilidad = probSi + proyeccionPendientes;
-            
+            probabilidad = (listaSi.length * 10) + proyeccionPendientes;
             const cap = 98;
             probabilidad = Math.min(probabilidad, cap);
 
@@ -617,13 +611,11 @@ function renderSummary() {
             else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
             else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
             else { 
-                // --- MODIFICADO: No mostrar porcentaje si es rojo ---
                 claseColor = "rojo"; 
                 overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
                                 <p class="recomendacion">🔥 La probabilidad es muy baja. Conviene buscar gente.</p>`;
             }
 
-            // --- MODIFICADO: Mensaje acortado ---
             if (finalDecayActive && !overrideHtml) {
                 recomendacion += "<br><small>⚠️ ¡El tiempo se agota!</small>";
             }
@@ -646,8 +638,7 @@ function renderSummary() {
         let problematicMatches = 0;
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         last4MatchesKeys.forEach(key => {
-            const match = historial[key];
-            if (match.cancelado || match.con_extras) {
+            if (historial[key].cancelado || historial[key].con_extras) {
                 problematicMatches++;
             }
         });
@@ -664,7 +655,6 @@ function renderSummary() {
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
     if (isRefuerzosOpen && !showRefuerzosForce) {
-        // --- MODIFICADO: Mensaje acortado ---
         const recHtml = overrideHtml ? document.createElement('div') : document.createElement('p');
         if (overrideHtml) recHtml.innerHTML = overrideHtml;
         let existingRec = overrideHtml ? recHtml.querySelector('.recomendacion').innerHTML : recomendacion;
@@ -691,7 +681,7 @@ function renderSummary() {
     const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
     
     // --- MODIFICADO: Icono SVG azul ---
-    const infoIconSvg = `<svg class="info-icon-svg" viewBox="0 0 16 16"><path d="M7.93,1.602c3.43,0,6.219,2.789,6.219,6.219c0,3.43-2.789,6.219-6.219,6.219c-3.43,0-6.219-2.789-6.219-6.219C1.711,4.391,4.5,1.602,7.93,1.602 M7.93,0C3.551,0,0,3.551,0,7.93c0,4.379,3.551,7.93,7.93,7.93s7.93-3.551,7.93-7.93C15.86,3.551,12.309,0,7.93,0z M8.578,11.969h-1.32V6.883h1.32V11.969z M7.91,5.559c-0.496,0-0.898-0.402-0.898-0.898c0-0.496,0.402-0.898,0.898-0.898s0.898,0.402,0.898,0.898C8.808,5.156,8.406,5.559,7.91,5.559z"/></svg>`;
+    const infoIconSvg = `<svg class="info-icon-svg" id="prob-info-icon" viewBox="0 0 16 16"><path d="M7.93,1.602c3.43,0,6.219,2.789,6.219,6.219c0,3.43-2.789,6.219-6.219,6.219c-3.43,0-6.219-2.789-6.219-6.219C1.711,4.391,4.5,1.602,7.93,1.602 M7.93,0C3.551,0,0,3.551,0,7.93c0,4.379,3.551,7.93,7.93,7.93s7.93-3.551,7.93-7.93C15.86,3.551,12.309,0,7.93,0z M8.578,11.969h-1.32V6.883h1.32V11.969z M7.91,5.559c-0.496,0-0.898-0.402-0.898-0.898c0-0.496,0.402-0.898,0.898-0.898s0.898,0.402,0.898,0.898C8.808,5.156,8.406,5.559,7.91,5.559z"/></svg>`;
 
     if (overrideHtml) {
         resultadoDiv.innerHTML = overrideHtml + listaHtml;
@@ -705,12 +695,19 @@ function renderTable() {
     tablaBody.innerHTML = '';
     
     const jugadores = currentDbData.jugadores || {};
+    const history = currentDbData.historial || {};
+    const last4Matches = Object.keys(history).sort().slice(-4);
 
     Object.keys(jugadores).forEach(key => {
         const jugador = jugadores[key];
-        const status = jugador.status || 'pendiente';
-        const fiabilidad = getPlayerReliability(key).last4.percentage; // Coger solo la fiabilidad reciente para la tabla
         
+        let attended = 0;
+        last4Matches.forEach(matchKey => {
+            if (history[matchKey].jugadores?.[key]?.status === 'si') attended++;
+        });
+        const fiabilidad = last4Matches.length > 0 ? `${(attended / last4Matches.length * 100).toFixed(0)}%` : 'N/A';
+        
+        const status = jugador.status || 'pendiente';
         const fila = `
             <tr data-key="${key}">
                 <td>${jugador.nombre}</td>
@@ -726,26 +723,6 @@ function renderTable() {
         tablaBody.innerHTML += fila;
     });
 }
-
-function getPlayerReliability(playerKey) {
-    const history = currentDbData.historial || {};
-    // ... (This logic is now inside showPlayerReliability, I should refactor)
-    // Refactoring this logic into a helper function to avoid repetition
-    const last4Matches = Object.keys(history).sort().slice(-4);
-    let attendedLast4 = 0;
-    last4Matches.forEach(matchKey => {
-        if (history[matchKey].jugadores?.[playerKey]?.status === 'si') attendedLast4++;
-    });
-    
-    return {
-        last4: {
-            attended: attendedLast4,
-            total: last4Matches.length,
-            percentage: last4Matches.length > 0 ? `${(attendedLast4 / last4Matches.length * 100).toFixed(0)}%` : 'N/A'
-        }
-    };
-}
-
 
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
