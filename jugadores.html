@@ -141,6 +141,7 @@
         
         <button id="archive-button" class="admin-only admin-button" style="display:none; background-color: #1a73e8;">Archivar y Activar Siguiente Partido</button>
         <button id="reset-button" class="admin-only admin-button" style="display:none;">Resetear Asistencia</button>
+        <button id="toggle-refuerzos-button" class="admin-only admin-button" style="display:none;"></button>
         
         <div id="resultado"></div>
         
@@ -501,6 +502,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // --- NUEVO: Listener para el botón de activar/desactivar refuerzos ---
+    document.getElementById('toggle-refuerzos-button').addEventListener('click', () => {
+        if (!isAdmin) return;
+        const isCurrentlyOpen = currentDbData.matchInfo?.refuerzosAbiertos;
+        // Si está abierto, lo cerramos (null), si no, lo abrimos (true)
+        database.ref('matchInfo/refuerzosAbiertos').set(!isCurrentlyOpen ? true : null);
+    });
+    
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombreRefuerzo = document.getElementById('refuerzo-nombre').value.trim();
         if(nombreRefuerzo && (isAdmin || loggedInPlayer)) {
@@ -548,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const conExtrasCount = allMatches.filter(m => m.con_extras).length;
             const playedMatches = totalMatches - canceladosCount;
 
-            const message = `Probabilidad basada en los datos de los últimos cuatro partidos y la fecha actual\n\n` +
+            const message = `Probabilidad basada en los datos históricos de los últimos cuatro partidos.\n\n` +
                           `<strong>ESTADÍSTICAS TEMPORADA 25-26:</strong>\n` +
                           `Partidos totales: ${totalMatches}\n` +
                           `Partidos jugados: ${playedMatches}\n` +
@@ -690,30 +699,32 @@ function renderSummary() {
     const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
 
     // Calcular probabilidad primero para usarla en la lógica de apertura de refuerzos
-    const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
     let proyeccionPendientes = 0;
-    listaPendiente.forEach(jugador => {
-        let attended = 0;
-        last4MatchesKeys.forEach(matchKey => {
-            if (historial[matchKey]?.jugadores?.[jugador.key]?.status === 'si') attended++;
-        });
-        const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
-        const pisoFiabilidad = 0.1;
-        const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
+    if (listaPendiente.length > 0) {
+        const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
+        listaPendiente.forEach(jugador => {
+            let attended = 0;
+            last4MatchesKeys.forEach(matchKey => {
+                if (historial[matchKey]?.jugadores?.[jugador.key]?.status === 'si') attended++;
+            });
+            const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
+            const pisoFiabilidad = 0.1;
+            const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
 
-        const mondayStart = new Date(matchDate);
-        mondayStart.setDate(mondayStart.getDate() - 2);
-        mondayStart.setHours(0, 0, 0, 0);
-        const tuesdayEnd = new Date(mondayStart);
-        tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
-        tuesdayEnd.setHours(14, 0, 0, 0);
-        let factorTiempo = 1.0;
-        if (ahora > mondayStart) {
-            if (ahora < tuesdayEnd) factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
-            else factorTiempo = 0.33;
-        }
-        proyeccionPendientes += 10 * fiabilidad * factorTiempo;
-    });
+            const mondayStart = new Date(matchDate);
+            mondayStart.setDate(mondayStart.getDate() - 2);
+            mondayStart.setHours(0, 0, 0, 0);
+            const tuesdayEnd = new Date(mondayStart);
+            tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+            tuesdayEnd.setHours(14, 0, 0, 0);
+            let factorTiempo = 1.0;
+            if (ahora > mondayStart) {
+                if (ahora < tuesdayEnd) factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
+                else factorTiempo = 0.33;
+            }
+            proyeccionPendientes += 10 * fiabilidad * factorTiempo;
+        });
+    }
     probabilidad = (listaSi.length * 10) + proyeccionPendientes;
 
 
@@ -760,7 +771,7 @@ function renderSummary() {
         }
     }
     
-    // --- LÓGICA DE APERTURA DE REFUERZOS REESCRITA ---
+    // --- LÓGICA DE APERTURA DE REFUERZOS ---
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
@@ -769,37 +780,32 @@ function renderSummary() {
             isRefuerzosOpen = true;
         } else {
             let openByLogic = false;
-            // Primero, comprobar si ya está abierto de forma persistente
             if (matchInfo?.refuerzosAbiertos) {
                 openByLogic = true;
             } else {
-                // Si no, evaluar las condiciones de apertura por primera vez
                 const monday14h = new Date(matchDate);
                 monday14h.setDate(matchDate.getDate() - 2);
                 monday14h.setHours(14, 0, 0, 0);
-
                 if (ahora >= monday14h) {
                     const lastMatch = Object.values(historial || {}).pop();
                     const wasCancelled = lastMatch?.cancelado;
-
                     if (wasCancelled || (!wasCancelled && probabilidad < 70)) {
                         openByLogic = true;
-                        database.ref('matchInfo/refuerzosAbiertos').set(true); // Activa el "efecto memoria"
+                        database.ref('matchInfo/refuerzosAbiertos').set(true);
                     }
                 }
             }
             
-            // Reglas de cierre y excepción de última hora
             const tuesday14h = new Date(matchDate);
             tuesday14h.setDate(tuesday14h.getDate() - 1);
             tuesday14h.setHours(14, 0, 0, 0);
 
             if (totalConfirmados >= 12) {
-                openByLogic = false; // Se cierra si hay 12 o más
+                openByLogic = false;
             } else if (totalConfirmados >= 10 && ahora < tuesday14h) {
-                openByLogic = false; // Se cierra con 10 u 11 antes del martes
+                openByLogic = false; 
             } else if (totalConfirmados >= 10 && ahora >= tuesday14h) {
-                openByLogic = true; // Excepción: se mantiene/reabre con 10 u 11 después del martes
+                openByLogic = true;
             }
             isRefuerzosOpen = openByLogic;
         }
@@ -887,6 +893,20 @@ function applyVisibility() {
     document.body.classList.toggle('admin-view', isAdmin);
     
     document.getElementById('whatsapp-button').style.display = (isAdmin || loggedInPlayer) ? 'flex' : 'none';
+
+    // --- NUEVO: Actualiza el texto y color del botón de activar/desactivar refuerzos ---
+    if (isAdmin) {
+        const toggleButton = document.getElementById('toggle-refuerzos-button');
+        const isRefuerzosOpenGlobally = currentDbData.matchInfo?.refuerzosAbiertos;
+        if (isRefuerzosOpenGlobally) {
+            toggleButton.textContent = 'Desactivar Añadir Amigos (Manual)';
+            toggleButton.style.backgroundColor = '#dc3545';
+        } else {
+            toggleButton.textContent = 'Activar Añadir Amigos (Manual)';
+            toggleButton.style.backgroundColor = '#28a745';
+        }
+    }
+
 
     document.querySelectorAll('#tabla-jugadores tbody tr').forEach(fila => {
         const key = fila.dataset.key;
