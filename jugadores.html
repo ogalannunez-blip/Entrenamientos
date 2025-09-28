@@ -94,6 +94,10 @@
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
         .modal-button.cancel{background-color:#6c757d;}
         .modal-button:hover{opacity:0.85;}
+        
+        /* --- NUEVO: Estilos para el widget del tiempo --- */
+        #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
+        .weather-icon{font-size:1.5em;}
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
@@ -145,6 +149,8 @@
         
         <div id="resultado"></div>
         
+        <div id="weather-forecast">Cargando previsión del tiempo...</div>
+
         <div id="refuerzos-section">
             <h4>Añadir Refuerzos</h4>
             <input type="text" id="refuerzo-nombre" placeholder="Nombre del refuerzo...">
@@ -502,11 +508,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // --- NUEVO: Listener para el botón de activar/desactivar refuerzos ---
     document.getElementById('toggle-refuerzos-button').addEventListener('click', () => {
         if (!isAdmin) return;
         const isCurrentlyOpen = currentDbData.matchInfo?.refuerzosAbiertos;
-        // Si está abierto, lo cerramos (null), si no, lo abrimos (true)
         database.ref('matchInfo/refuerzosAbiertos').set(!isCurrentlyOpen ? true : null);
     });
     
@@ -698,7 +702,6 @@ function renderSummary() {
     const totalConfirmados = listaSi.length + listaRefuerzos.length;
     const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
 
-    // Calcular probabilidad primero para usarla en la lógica de apertura de refuerzos
     let proyeccionPendientes = 0;
     if (listaPendiente.length > 0) {
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
@@ -894,7 +897,6 @@ function applyVisibility() {
     
     document.getElementById('whatsapp-button').style.display = (isAdmin || loggedInPlayer) ? 'flex' : 'none';
 
-    // --- NUEVO: Actualiza el texto y color del botón de activar/desactivar refuerzos ---
     if (isAdmin) {
         const toggleButton = document.getElementById('toggle-refuerzos-button');
         const isRefuerzosOpenGlobally = currentDbData.matchInfo?.refuerzosAbiertos;
