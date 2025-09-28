@@ -213,7 +213,7 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // --- VARIABLES GLOBALES Y CONFIGURACIÓN ---
-const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/HkJ7ha85RvsHl4URkdwFcd?mode=ems_copy_t';
+const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/TU_ENLACE_AQUI';
 
 let adminPassword = "";
 let isAdmin = false;
@@ -378,7 +378,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const { jugadores, refuerzos, matchInfo } = currentDbData;
         const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
         
-        // --- CORREGIDO: Genera la clave del historial usando la hora local para evitar confusión de zona horaria ---
         const pad = (num) => num.toString().padStart(2, '0');
         const matchKey = `${oldMatchDate.getFullYear()}-${pad(oldMatchDate.getMonth() + 1)}-${pad(oldMatchDate.getDate())}-${pad(oldMatchDate.getHours())}${pad(oldMatchDate.getMinutes())}${pad(oldMatchDate.getSeconds())}`;
 
@@ -409,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         updates['/refuerzos'] = null;
-        // --- CORREGIDO: Pasa la hora actual para el cálculo correcto ---
         updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
 
         try {
@@ -419,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showCustomAlert('Error', 'Error al archivar el partido: ' + error.message);
         }
     });
-
+    
     document.getElementById('reset-button').addEventListener('click', () => {
         if (!isAdmin) return;
         if (confirm('¿Estás seguro de que quieres poner a todos los jugadores en "Pendiente"?')) {
@@ -460,7 +458,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => showCustomAlert('Error', "Error al añadir jugador: " + error.message));
     });
     
-    // Listener principal del body para delegación de eventos
     document.body.addEventListener('click', function(e) {
         if (e.target.closest('.delete-refuerzo')) {
             const refuerzoElement = e.target.closest('.delete-refuerzo');
@@ -488,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                           `Partidos jugados: ${playedMatches}\n` +
                           `Partidos cancelados: ${canceladosCount}\n` +
                           `Partidos jugados gracias a amigos: ${conExtrasCount}`;
-            showCustomAlert('Información del Partido', message);
+            showCustomAlert('Información', message);
         }
         else if (e.target.classList.contains('summary-player-name')) {
             const playerKey = e.target.dataset.key;
@@ -586,6 +583,11 @@ function renderSummary() {
         else listaPendiente.push(j);
     });
 
+    const sortByName = (a, b) => a.nombre.localeCompare(b.nombre);
+    listaSi.sort(sortByName);
+    listaPendiente.sort(sortByName);
+    listaNo.sort(sortByName);
+
     const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
     
     let probabilidad, recomendacion, claseColor, overrideHtml = null;
@@ -648,13 +650,15 @@ function renderSummary() {
             }
         }
         
-        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "¡Casi está! Solo falta confirmar."; }
+        // --- MODIFICADO: Cambios en los textos de recomendación ---
+        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { 
             claseColor = "rojo"; 
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
-                            <p class="recomendacion">🔥 La probabilidad es muy baja. Conviene buscar gente.</p>`;
+                            <p class="recomendacion">🔥 La probabilidad de jugar es muy baja. Avisad a todos los amigos que podáis.<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small></p>`;
+            showRefuerzosForce = true;
         }
 
         if (finalDecayActive && !overrideHtml) {
@@ -690,7 +694,7 @@ function renderSummary() {
     }
 
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
-    if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml?.includes('amigos')) {
+    if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml) {
         recomendacion = (recomendacion || '') + '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
     }
 
@@ -783,9 +787,8 @@ function applyVisibility() {
     });
 }
 
-// --- CORREGIDO: Función robusta para calcular la fecha del siguiente miércoles ---
 function getNextWednesday(now, forceNextWeek = false) {
-    const d = new Date(now); // Usa la fecha proporcionada (real o simulada)
+    const d = new Date(now);
     const today = d.getDay();
     let offset = (3 - today + 7) % 7;
     
