@@ -95,7 +95,7 @@
         .modal-button.cancel{background-color:#6c757d;}
         .modal-button:hover{opacity:0.85;}
         
-        /* --- NUEVO: Estilos para el widget del tiempo --- */
+        /* Estilos para el widget del tiempo */
         #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
         .weather-icon{font-size:1.5em;}
 
@@ -241,6 +241,7 @@ let loggedInPlayer = null;
 let currentDbData = null;
 let simulatedTime = null; 
 let isMatchPendingActivation = false;
+let weatherHasBeenFetched = false; // --- NUEVO: Bandera para controlar la carga del tiempo ---
 
 // --- Sistema de Ventanas Modales Personalizadas ---
 function showCustomAlert(title, message, onOk) {
@@ -365,6 +366,12 @@ document.addEventListener('DOMContentLoaded', function() {
             activationTimeLimit.setHours(22, 0, 0, 0); 
             isMatchPendingActivation = ahora > activationTimeLimit;
             renderUI();
+
+            // --- CORREGIDO: Llamada a la función del tiempo ---
+            if (!weatherHasBeenFetched) {
+                fetchAndDisplayWeather();
+                weatherHasBeenFetched = true;
+            }
         }
     });
 
@@ -654,6 +661,43 @@ function showPlayerReliability(playerKey) {
     showCustomAlert(`Fiabilidad de ${playerName}`, message);
 }
 
+// --- NUEVO: Función para obtener y mostrar el tiempo ---
+async function fetchAndDisplayWeather() {
+    const weatherDiv = document.getElementById('weather-forecast');
+    try {
+        const ahora = getCurrentTime();
+        const matchDate = getNextWednesday(ahora);
+        const dateString = `${matchDate.getFullYear()}-${(matchDate.getMonth() + 1).toString().padStart(2, '0')}-${matchDate.getDate().toString().padStart(2, '0')}`;
+        
+        // Coordenadas de Getafe
+        const lat = 40.31;
+        const lon = -3.73;
+        
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability&start_date=${dateString}&end_date=${dateString}`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('No se pudo obtener la previsión.');
+        
+        const data = await response.json();
+        
+        // La hora del partido es 21:00, que corresponde al índice 21 en la respuesta de la API
+        const hourIndex = 21;
+        const temp = data.hourly.temperature_2m[hourIndex];
+        const rain = data.hourly.precipitation_probability[hourIndex];
+
+        weatherDiv.innerHTML = `
+            <span>Previsión para el partido:</span>
+            <span class="weather-icon">🌡️</span>
+            <span>${temp.toFixed(0)}°C</span>
+            <span class="weather-icon">💧</span>
+            <span>${rain}%</span>
+        `;
+    } catch (error) {
+        weatherDiv.textContent = 'No se pudo cargar la previsión del tiempo.';
+        console.error("Error fetching weather:", error);
+    }
+}
+
 // --- FUNCIONES DE RENDERIZADO ---
 function renderUI() {
     if (!currentDbData) return;
@@ -713,7 +757,6 @@ function renderSummary() {
             const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
             const pisoFiabilidad = 0.1;
             const fiabilidad = Math.max(fiabilidadReal, pisoFiabilidad);
-
             const mondayStart = new Date(matchDate);
             mondayStart.setDate(mondayStart.getDate() - 2);
             mondayStart.setHours(0, 0, 0, 0);
@@ -774,7 +817,6 @@ function renderSummary() {
         }
     }
     
-    // --- LÓGICA DE APERTURA DE REFUERZOS ---
     let isRefuerzosOpen = false;
     if (isAdmin) {
         isRefuerzosOpen = true;
