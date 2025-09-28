@@ -183,6 +183,18 @@
     </div>
 </div>
 
+<div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="confirm-title" class="modal-title"></h3>
+        <p id="confirm-message" class="modal-message"></p>
+        <div class="modal-buttons">
+            <button id="confirm-cancel" class="modal-button cancel">Cancelar</button>
+            <button id="confirm-ok" class="modal-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+
+
 <div id="custom-prompt-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="prompt-title" class="modal-title"></h3>
@@ -213,7 +225,7 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // --- VARIABLES GLOBALES Y CONFIGURACIÓN ---
-const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/TU_ENLACE_AQUI';
+const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/HkJ7ha85RvsHl4URkdwFcd?mode=ems_copy_t';
 
 let adminPassword = "";
 let isAdmin = false;
@@ -223,17 +235,42 @@ let simulatedTime = null;
 let isMatchPendingActivation = false;
 
 // --- Sistema de Ventanas Modales Personalizadas ---
-function showCustomAlert(title, message) {
+function showCustomAlert(title, message, onOk) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-message').innerHTML = message.replace(/\n/g, '<br>');
-    document.getElementById('custom-alert-modal').style.display = 'flex';
+    const modal = document.getElementById('custom-alert-modal');
+    modal.style.display = 'flex';
+    
+    document.getElementById('modal-button').onclick = () => {
+        modal.style.display = 'none';
+        if (onOk) onOk(); // Ejecutar callback si existe
+    };
 }
-document.getElementById('modal-button').addEventListener('click', () => {
-    document.getElementById('custom-alert-modal').style.display = 'none';
-});
 document.getElementById('custom-alert-modal').addEventListener('click', (e) => {
     if (e.target.id === 'custom-alert-modal') document.getElementById('custom-alert-modal').style.display = 'none';
 });
+
+function showCustomConfirm(title, message) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('custom-confirm-modal');
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        modal.style.display = 'flex';
+
+        const okBtn = document.getElementById('confirm-ok');
+        const cancelBtn = document.getElementById('confirm-cancel');
+
+        const close = (value) => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(value);
+        };
+
+        okBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+    });
+}
 
 function showCustomPrompt(title) {
     return new Promise((resolve) => {
@@ -335,7 +372,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    document.getElementById('tabla-jugadores').addEventListener('change', (e) => {
+    // --- MODIFICADO: Listener de 'change' para la lógica de baja de última hora ---
+    document.getElementById('tabla-jugadores').addEventListener('change', async (e) => {
         const fila = e.target.closest('tr');
         if (!fila) return;
         const playerKey = fila.dataset.key;
@@ -344,7 +382,30 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.classList.contains('bajas')) {
             database.ref(`jugadores/${playerKey}/bajas`).set(parseInt(target.value, 10));
         } else if (target.name.startsWith('status-')) {
-             database.ref(`jugadores/${playerKey}/status`).set(target.value);
+            const newStatus = target.value;
+            const player = currentDbData.jugadores[playerKey];
+            const oldStatus = player.status;
+
+            const isLateBailout = checkLateBailoutConditions(oldStatus, newStatus, player);
+            
+            if (isLateBailout) {
+                const confirmed = await showCustomConfirm('Confirmación', '¿Estás seguro de cambiar tu respuesta?\nTu decisión afectará a la celebración del partido');
+                if (confirmed) {
+                    showCustomAlert('Aviso Importante', 'Por favor, avisa en el grupo de WhatsApp que no puedes ir.', () => {
+                        window.open(WHATSAPP_GROUP_LINK, '_blank');
+                    });
+                    const updates = {};
+                    updates[`/jugadores/${playerKey}/status`] = 'no';
+                    updates[`/jugadores/${playerKey}/bajas`] = (player.bajas || 0) + 1;
+                    updates[`/jugadores/${playerKey}/lateBailoutThisMatch`] = true;
+                    database.ref().update(updates);
+                } else {
+                    // Si el usuario cancela, revertir el cambio visual
+                    fila.querySelector(`input[value="si"]`).checked = true;
+                }
+            } else {
+                database.ref(`jugadores/${playerKey}/status`).set(newStatus);
+            }
         }
     });
 
@@ -386,11 +447,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalConfirmados = listaSi.length + listaRefuerzos.length;
 
         const historialJugadores = {};
+        const updates = {};
         Object.keys(jugadores).forEach(key => {
             historialJugadores[key] = {
                 nombre: jugadores[key].nombre,
                 status: jugadores[key].status === 'pendiente' ? 'no' : jugadores[key].status
             };
+            // Limpiar el flag de baja para el siguiente partido
+            updates[`/jugadores/${key}/lateBailoutThisMatch`] = null; 
         });
 
         const archiveData = {
@@ -400,7 +464,6 @@ document.addEventListener('DOMContentLoaded', function() {
             con_extras: totalConfirmados >= 10 && listaSi.length < 10,
         };
         
-        const updates = {};
         updates[`/historial/${matchKey}`] = archiveData;
         
         Object.keys(jugadores).forEach(key => {
@@ -508,11 +571,38 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
+// --- NUEVA FUNCIÓN: Comprueba si se cumplen las condiciones para una baja de última hora ---
+function checkLateBailoutConditions(oldStatus, newStatus, player) {
+    if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) {
+        return false;
+    }
+
+    const { jugadores, refuerzos, matchInfo } = currentDbData;
+    const ahora = getCurrentTime();
+    const matchDate = new Date(matchInfo.nextMatchDate);
+
+    const tuesdayCutoff = new Date(matchDate);
+    tuesdayCutoff.setDate(tuesdayCutoff.getDate() - 1);
+    tuesdayCutoff.setHours(14, 0, 0, 0);
+
+    if (ahora < tuesdayCutoff) {
+        return false;
+    }
+    
+    const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
+
+    return totalConfirmados >= 10;
+}
+
+
+// --- MODIFICADO: Muestra Bajas de última hora ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
     const history = currentDbData.historial || {};
-    const playerName = currentDbData.jugadores[playerKey].nombre;
+    const player = currentDbData.jugadores[playerKey];
+    const playerName = player.nombre;
+    const bajasCount = player.bajas || 0;
     
     const last4Matches = Object.keys(history).sort().slice(-4);
     let attendedLast4 = 0;
@@ -542,7 +632,8 @@ function showPlayerReliability(playerKey) {
                   `Fiabilidad: ${reliabilityLast4}%\n\n` +
                   `<strong>Temporada 25-26:</strong>\n` +
                   `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` +
-                  `Fiabilidad (Global): ${reliabilityAllTime}%`;
+                  `Fiabilidad (Global): ${reliabilityAllTime}%\n` +
+                  `Bajas de última hora: ${bajasCount}`;
                   
     showCustomAlert(`Fiabilidad de ${playerName}`, message);
 }
@@ -650,8 +741,7 @@ function renderSummary() {
             }
         }
         
-        // --- MODIFICADO: Cambios en los textos de recomendación ---
-        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
+        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "¡Casi está! Solo falta confirmar."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { 
@@ -756,7 +846,9 @@ function renderTable() {
 
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
-    testSection.style.display = (isAdmin || loggedInPlayer) ? 'block' : 'none';
+    // --- MODIFICADO: Simulación solo para admin ---
+    testSection.style.display = isAdmin ? 'block' : 'none';
+    
     if(isAdmin || loggedInPlayer) {
         const timeDisplay = document.getElementById('current-time-display');
         const now = getCurrentTime();
