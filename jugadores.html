@@ -7,7 +7,6 @@
     <style>
         /* Estilos generales */
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
-        /* --- MODIFICADO: Añadido padding-bottom para dejar espacio al botón de WhatsApp --- */
         .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 70px;}
         
         /* Encabezados */
@@ -74,6 +73,16 @@
         #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
         #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}
         
+        /* --- NUEVO: Estilo para resaltar el texto de login --- */
+        .highlight-login {
+            background-color: #fffbdd;
+            border: 1px solid #ffeb3b;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
         /* Secciones de admin */
         #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
         .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em;text-shadow:1px 1px 2px rgba(0,0,0,.5);}
@@ -127,7 +136,7 @@
             </div>
         </div>
     </h1>
-    <div id="login-info">Identifícate para responder</div>
+    <div id="login-info" class="highlight-login">Identifícate para responder →</div>
     
     <div class="date-header">
         <h2 id="match-date-title">Cargando...</h2>
@@ -303,17 +312,20 @@ function showCustomPrompt(title) {
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
+    const loginInfoDiv = document.getElementById('login-info');
     if (isAdmin) {
         isAdmin = false;
         loggedInPlayer = null;
-        document.getElementById('login-info').textContent = 'Identifícate para responder';
+        loginInfoDiv.textContent = 'Identifícate para responder →';
+        loginInfoDiv.className = 'highlight-login';
         renderUI();
     } else {
         const pass = await showCustomPrompt('Contraseña de Administrador');
         if (pass === adminPassword) {
             isAdmin = true;
             loggedInPlayer = null;
-            document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
+            loginInfoDiv.textContent = 'Sesión iniciada como Administrador';
+            loginInfoDiv.className = '';
         } else if (pass !== null) { 
             showCustomAlert('Error', 'Contraseña incorrecta.'); 
         }
@@ -328,11 +340,13 @@ document.getElementById('player-login-wrapper').addEventListener('click', async 
     
     const jugadores = currentDbData.jugadores;
     const playerKey = Object.keys(jugadores).find(key => jugadores[key].password === accessCode);
+    const loginInfoDiv = document.getElementById('login-info');
 
     if (playerKey) {
         loggedInPlayer = {...jugadores[playerKey], key: playerKey};
         isAdmin = false;
-        document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
+        loginInfoDiv.textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
+        loginInfoDiv.className = '';
     } else {
         showCustomAlert('Error', 'Código de acceso no reconocido.');
     }
