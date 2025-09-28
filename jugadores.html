@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data && data.jugadores) {
             currentDbData = data;
             const ahora = getCurrentTime();
-            const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+            const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
             const activationTimeLimit = new Date(nextMatchDate);
             activationTimeLimit.setHours(22, 0, 0, 0); 
             isMatchPendingActivation = ahora > activationTimeLimit;
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dateValue = document.getElementById('test-date').value;
         simulatedTime = dateValue ? new Date(dateValue) : null;
         const ahora = getCurrentTime();
-        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
         const activationTimeLimit = new Date(nextMatchDate);
         activationTimeLimit.setHours(22, 0, 0, 0); 
         isMatchPendingActivation = (ahora > activationTimeLimit);
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
         simulatedTime = null;
         document.getElementById('test-date').value = '';
         const ahora = getCurrentTime();
-        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday();
+        const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
         const activationTimeLimit = new Date(nextMatchDate);
         activationTimeLimit.setHours(22, 0, 0, 0); 
         isMatchPendingActivation = (ahora > activationTimeLimit);
@@ -374,9 +374,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!isAdmin || !isMatchPendingActivation) return;
         if (!confirm('¿Estás seguro de que quieres archivar este partido y activar el siguiente?')) return;
 
+        const ahora = getCurrentTime();
         const { jugadores, refuerzos, matchInfo } = currentDbData;
-        const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
+        const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
         
+        // --- CORREGIDO: Genera la clave del historial usando la hora local para evitar confusión de zona horaria ---
         const pad = (num) => num.toString().padStart(2, '0');
         const matchKey = `${oldMatchDate.getFullYear()}-${pad(oldMatchDate.getMonth() + 1)}-${pad(oldMatchDate.getDate())}-${pad(oldMatchDate.getHours())}${pad(oldMatchDate.getMinutes())}${pad(oldMatchDate.getSeconds())}`;
 
@@ -407,7 +409,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         updates['/refuerzos'] = null;
-        updates['/matchInfo/nextMatchDate'] = getNextWednesday(true).toISOString();
+        // --- CORREGIDO: Pasa la hora actual para el cálculo correcto ---
+        updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
 
         try {
             await database.ref().update(updates);
@@ -417,7 +420,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- NUEVO: Listener para el botón de resetear asistencia ---
     document.getElementById('reset-button').addEventListener('click', () => {
         if (!isAdmin) return;
         if (confirm('¿Estás seguro de que quieres poner a todos los jugadores en "Pendiente"?')) {
@@ -569,7 +571,8 @@ function renderUI() {
 
 function renderSummary() {
     const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
-    const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday();
+    const ahora = getCurrentTime();
+    const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
     const JUGADORES_NECESARIOS = 10;
@@ -601,7 +604,6 @@ function renderSummary() {
                         <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
-        const ahora = getCurrentTime();
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         let proyeccionPendientes = 0;
         
@@ -671,7 +673,6 @@ function renderSummary() {
     if (isAdmin) { isRefuerzosOpen = true; }
     else if (totalConfirmados >= 10) { isRefuerzosOpen = false; }
     else if (loggedInPlayer) {
-        const ahora = getCurrentTime();
         let problematicMatches = 0;
         const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
         last4MatchesKeys.forEach(key => {
@@ -759,6 +760,7 @@ function applyVisibility() {
     }
     
     document.getElementById('archive-button').style.display = (isAdmin && isMatchPendingActivation) ? 'block' : 'none';
+    document.getElementById('reset-button').style.display = isAdmin && !isMatchPendingActivation ? 'block' : 'none';
     
     const tablaVisible = (isAdmin || loggedInPlayer) && !isMatchPendingActivation;
     document.getElementById('tabla-jugadores').style.display = tablaVisible ? '' : 'none';
@@ -781,12 +783,13 @@ function applyVisibility() {
     });
 }
 
-function getNextWednesday(forceNextWeek = false) {
-    const d = new Date();
+// --- CORREGIDO: Función robusta para calcular la fecha del siguiente miércoles ---
+function getNextWednesday(now, forceNextWeek = false) {
+    const d = new Date(now); // Usa la fecha proporcionada (real o simulada)
     const today = d.getDay();
     let offset = (3 - today + 7) % 7;
     
-    const newDate = new Date();
+    const newDate = new Date(d);
     newDate.setDate(d.getDate() + offset);
 
     if ((offset === 0 && d.getHours() >= 22) || forceNextWeek) {
