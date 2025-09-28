@@ -7,7 +7,8 @@
     <style>
         /* Estilos generales */
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
-        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+        /* --- MODIFICADO: Añadido padding-bottom para dejar espacio al botón de WhatsApp --- */
+        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 70px;}
         
         /* Encabezados */
         h1,h2{text-align:center;color:#1a73e8}
@@ -243,7 +244,7 @@ function showCustomAlert(title, message, onOk) {
     
     document.getElementById('modal-button').onclick = () => {
         modal.style.display = 'none';
-        if (onOk) onOk(); // Ejecutar callback si existe
+        if (onOk) onOk(); 
     };
 }
 document.getElementById('custom-alert-modal').addEventListener('click', (e) => {
@@ -372,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // --- MODIFICADO: Listener de 'change' para la lógica de baja de última hora ---
     document.getElementById('tabla-jugadores').addEventListener('change', async (e) => {
         const fila = e.target.closest('tr');
         if (!fila) return;
@@ -392,7 +392,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const confirmed = await showCustomConfirm('Confirmación', '¿Estás seguro de cambiar tu respuesta?\nTu decisión afectará a la celebración del partido');
                 if (confirmed) {
                     showCustomAlert('Aviso Importante', 'Por favor, avisa en el grupo de WhatsApp que no puedes ir.', () => {
-                        window.open(WHATSAPP_GROUP_LINK, '_blank');
+                        if (WHATSAPP_GROUP_LINK && !WHATSAPP_GROUP_LINK.includes('TU_ENLACE_AQUI')) {
+                            window.open(WHATSAPP_GROUP_LINK, '_blank');
+                        }
                     });
                     const updates = {};
                     updates[`/jugadores/${playerKey}/status`] = 'no';
@@ -400,7 +402,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     updates[`/jugadores/${playerKey}/lateBailoutThisMatch`] = true;
                     database.ref().update(updates);
                 } else {
-                    // Si el usuario cancela, revertir el cambio visual
                     fila.querySelector(`input[value="si"]`).checked = true;
                 }
             } else {
@@ -453,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 nombre: jugadores[key].nombre,
                 status: jugadores[key].status === 'pendiente' ? 'no' : jugadores[key].status
             };
-            // Limpiar el flag de baja para el siguiente partido
             updates[`/jugadores/${key}/lateBailoutThisMatch`] = null; 
         });
 
@@ -571,7 +571,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
 function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
 
-// --- NUEVA FUNCIÓN: Comprueba si se cumplen las condiciones para una baja de última hora ---
 function checkLateBailoutConditions(oldStatus, newStatus, player) {
     if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) {
         return false;
@@ -594,8 +593,6 @@ function checkLateBailoutConditions(oldStatus, newStatus, player) {
     return totalConfirmados >= 10;
 }
 
-
-// --- MODIFICADO: Muestra Bajas de última hora ---
 function showPlayerReliability(playerKey) {
     if (!currentDbData || !currentDbData.jugadores[playerKey]) return;
 
@@ -632,7 +629,7 @@ function showPlayerReliability(playerKey) {
                   `Fiabilidad: ${reliabilityLast4}%\n\n` +
                   `<strong>Temporada 25-26:</strong>\n` +
                   `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` +
-                  `Fiabilidad (Global): ${reliabilityAllTime}%\n` +
+                  `Fiabilidad (Global): ${reliabilityAllTime}%\n`+
                   `Bajas de última hora: ${bajasCount}`;
                   
     showCustomAlert(`Fiabilidad de ${playerName}`, message);
@@ -741,7 +738,7 @@ function renderSummary() {
             }
         }
         
-        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "¡Casi está! Solo falta confirmar."; }
+        if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { 
@@ -846,7 +843,6 @@ function renderTable() {
 
 function applyVisibility() {
     const testSection = document.getElementById('admin-test-section');
-    // --- MODIFICADO: Simulación solo para admin ---
     testSection.style.display = isAdmin ? 'block' : 'none';
     
     if(isAdmin || loggedInPlayer) {
