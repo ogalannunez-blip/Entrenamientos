@@ -7,7 +7,7 @@
     <style>
         /* Estilos generales */
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
-        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 70px;}
+        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 80px;}
         
         /* Encabezados */
         h1,h2{text-align:center;color:#1a73e8}
@@ -72,17 +72,8 @@
         /* Iconos de estado */
         #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
         #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px}
+        .highlight-login {background-color:#fffbdd;border:1px solid #ffeb3b;padding:5px 10px;border-radius:5px;display:inline-block;margin-top:5px;}
         
-        /* --- NUEVO: Estilo para resaltar el texto de login --- */
-        .highlight-login {
-            background-color: #fffbdd;
-            border: 1px solid #ffeb3b;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-            margin-top: 5px;
-        }
-
         /* Secciones de admin */
         #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
         .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em;text-shadow:1px 1px 2px rgba(0,0,0,.5);}
@@ -106,7 +97,7 @@
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
-            body{padding:5px}.container{padding:15px}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
+            body{padding:5px}.container{padding:15px; padding-bottom: 80px;}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
             table,thead,tbody,th,td,tr{display:block}
             thead tr{position:absolute;top:-9999px;left:-9999px}
             tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
@@ -486,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updates['/refuerzos'] = null;
         updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
+        updates['/matchInfo/refuerzosAbiertos'] = null;
 
         try {
             await database.ref().update(updates);
@@ -752,13 +744,44 @@ function renderSummary() {
             }
         }
         
+        // --- MODIFICADO: Lógica de apertura de refuerzos simplificada ---
+        let openByLogic = false;
+        if (matchInfo?.refuerzosAbiertos) {
+            openByLogic = true;
+        } else {
+            const monday14h = new Date(matchDate);
+            monday14h.setDate(monday14h.getDate() - 2);
+            monday14h.setHours(14,0,0,0);
+
+            if (ahora >= monday14h) {
+                const lastMatch = Object.values(historial || {}).pop();
+                if ((lastMatch?.cancelado) || (!lastMatch?.cancelado && probabilidad < 70)) {
+                    openByLogic = true;
+                    database.ref('matchInfo/refuerzosAbiertos').set(true);
+                }
+            }
+        }
+
+        const tuesday14h = new Date(matchDate);
+        tuesday14h.setDate(tuesday14h.getDate() - 1);
+        tuesday14h.setHours(14,0,0,0);
+        const topUpCondition = ahora >= tuesday14h && totalConfirmados >= 10 && totalConfirmados < 12;
+
+        if (topUpCondition) {
+            openByLogic = true;
+        } else if (totalConfirmados >= 10) {
+            openByLogic = false;
+        }
+       
+        isRefuerzosOpen = isAdmin || openByLogic || showRefuerzosForce;
+
         if (probabilidad >= 95) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else if (probabilidad >= 40) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
         else { 
             claseColor = "rojo"; 
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
-                            <p class="recomendacion">🔥 La probabilidad de jugar es muy baja. Avisad a todos los amigos que podáis.<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small></p>`;
+                            <p class="recomendacion">🔥 La probabilidad es muy baja. Avisad a todos los amigos que podáis.<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small></p>`;
             showRefuerzosForce = true;
         }
 
@@ -774,26 +797,6 @@ function renderSummary() {
         recomendacion += '<br><small style="font-weight: bold; opacity: 0.9;">AVISO: Hay apuntados con historial de bajas de última hora.</small>';
     }
     
-    let isRefuerzosOpen = false;
-    if (isAdmin) { isRefuerzosOpen = true; }
-    else if (totalConfirmados >= 10) { isRefuerzosOpen = false; }
-    else if (loggedInPlayer) {
-        let problematicMatches = 0;
-        const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
-        last4MatchesKeys.forEach(key => {
-            if (historial[key].cancelado || historial[key].con_extras) {
-                problematicMatches++;
-            }
-        });
-        const hourOffset = problematicMatches * 6; 
-        const activationTime = new Date(matchDate);
-        activationTime.setDate(activationTime.getDate() - 1); 
-        activationTime.setHours(14 - hourOffset, 0, 0, 0);
-        if (showRefuerzosForce || ahora >= activationTime) {
-            isRefuerzosOpen = true;
-        }
-    }
-
     document.getElementById('refuerzos-section').style.display = isRefuerzosOpen ? 'block' : 'none';
     if (isRefuerzosOpen && !showRefuerzosForce && !overrideHtml) {
         recomendacion = (recomendacion || '') + '<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small>';
