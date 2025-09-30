@@ -107,10 +107,10 @@
         .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
         #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
         #match-menu-icon.active {display:inline-block;}
-        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
-        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1001;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
+        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:block;} /* Cambiado a block por defecto */
+        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:999;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
         #match-menu-dropdown:hover {background-color:#f1f1f1;}
-        .team-modal-container {display:flex;justify-content:space-around;text-align:left;}
+        .team-modal-container {display:flex;justify-content:space-around;text-align:center;}
         .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
         .team-column ul {list-style:none;padding:0;}
         .team-column li {padding:4px 0;}
@@ -229,20 +229,20 @@ let weatherHasBeenFetched = false;
 
 // --- SISTEMA DE VENTANAS MODALES (ORIGINAL + AÑADIDOS) ---
 function showCustomAlert(title, message, onOk) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').innerHTML = message.replace(/\n/g, '<br>');
-    const modal = document.getElementById('custom-alert-modal');
-    modal.style.display = 'flex';
-    document.getElementById('modal-button').onclick = () => { modal.style.display = 'none'; if (onOk) onOk(); };
+    const el = document.getElementById('custom-alert-modal');
+    el.querySelector('#modal-title').textContent = title;
+    el.querySelector('#modal-message').innerHTML = message.replace(/\n/g, '<br>');
+    el.style.display = 'flex';
+    el.querySelector('#modal-button').onclick = () => { el.style.display = 'none'; if (onOk) onOk(); };
 }
 function showCustomConfirm(title, message) {
     return new Promise(resolve => {
         const modal = document.getElementById('custom-confirm-modal');
-        document.getElementById('confirm-title').textContent = title;
-        document.getElementById('confirm-message').textContent = message;
+        modal.querySelector('#confirm-title').textContent = title;
+        modal.querySelector('#confirm-message').textContent = message;
         modal.style.display = 'flex';
-        const okBtn = document.getElementById('confirm-ok');
-        const cancelBtn = document.getElementById('confirm-cancel');
+        const okBtn = modal.querySelector('#confirm-ok');
+        const cancelBtn = modal.querySelector('#confirm-cancel');
         const close = v => { modal.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; resolve(v); };
         okBtn.onclick = () => close(true);
         cancelBtn.onclick = () => close(false);
@@ -251,7 +251,7 @@ function showCustomConfirm(title, message) {
 function showCustomPrompt(title) {
     return new Promise(resolve => {
         const modal = document.getElementById('custom-prompt-modal');
-        const input = document.getElementById('prompt-input');
+        const input = modal.querySelector('#prompt-input');
         modal.querySelector('#prompt-title').textContent = title;
         input.value = '';
         modal.style.display = 'flex';
@@ -417,7 +417,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const { jugadores, matchInfo, historial } = currentDbData;
         const refuerzos = currentDbData.refuerzos || {};
         const ahora = getCurrentTime();
-        
+
+        // Lógica de material
         const ballBringers = [], bibsBringers = [];
         Object.values(jugadores).forEach(j => {
             if (j.status === 'si') {
@@ -430,10 +431,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (bibsBringers.length > 0) equipmentHtml += `<span><b>Petos:</b> ${bibsBringers.join(', ')}</span>`;
         document.getElementById('equipment-summary').innerHTML = equipmentHtml;
         document.getElementById('equipment-summary').style.display = equipmentHtml ? 'block' : 'none';
-
+        
+        // Lógica de fecha
         const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
         document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
+        // Lógica de listas
         const { si, pendiente, no } = Object.keys(jugadores).reduce((acc, key) => {
             const j = {...jugadores[key], key};
             const status = j.status || 'pendiente';
@@ -444,66 +447,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const sortByName = (a, b) => a.nombre.localeCompare(b.nombre);
         si.sort(sortByName); pendiente.sort(sortByName); no.sort(sortByName);
+        
         const totalConfirmados = si.length + Object.keys(refuerzos).length;
 
+        // Lógica de menú
         const menuIcon = document.getElementById('match-menu-icon');
         if (totalConfirmados >= 10 && (loggedInPlayer || isAdmin)) {
             menuIcon.classList.add('active');
-            menuIcon.querySelector('.notification-dot').style.display = si.some(j => j.equipo) ? 'none' : 'block';
+            menuIcon.querySelector('.notification-dot').style.display = 'block';
         } else {
             menuIcon.classList.remove('active');
             document.getElementById('match-menu-dropdown').style.display = 'none';
         }
-
-        let probabilidad, recomendacion, claseColor, overrideHtml = null;
-        let showRefuerzosForce = false;
+        
+        // Lógica de probabilidad y recomendación
+        let mainHtml, claseColor, recomendacion;
         const maximoPosiblePlantilla = si.length + pendiente.length;
 
         if (totalConfirmados >= 10) {
             claseColor = "verde";
+            mainHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
             recomendacion = `Ya sois ${totalConfirmados}.`;
-            overrideHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
         } else if (maximoPosiblePlantilla < 10) {
             claseColor = "rojo";
+            mainHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>`;
             recomendacion = `Imposible llegar a 10. Se necesitan ${10 - totalConfirmados} refuerzo(s).`;
-            overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>`;
-            showRefuerzosForce = true;
         } else {
-            let proyeccionPendientes = 0;
-            const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
-            pendiente.forEach(jugador => {
-                let attended = 0;
-                last4MatchesKeys.forEach(matchKey => {
-                    if (historial[matchKey]?.jugadores?.[jugador.key]?.status === 'si') attended++;
+            let probabilidad = 0;
+            const last4 = Object.keys(historial || {}).sort().slice(-4);
+            if (last4.length > 0) {
+                pendiente.forEach(p => {
+                    const attended = last4.filter(key => historial[key]?.jugadores?.[p.key]?.status === 'si').length;
+                    probabilidad += 10 * Math.max(attended / last4.length, 0.1);
                 });
-                const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
-                proyeccionPendientes += 10 * Math.max(fiabilidadReal, 0.1);
-            });
-            probabilidad = Math.min((si.length * 10) + proyeccionPendientes, 98);
-            
-            if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
-            else { 
-                claseColor = "rojo"; 
-                recomendacion = "🔥 La probabilidad de jugar es muy baja. Avisad a todos los amigos que podáis.";
-                showRefuerzosForce = true;
             }
+            probabilidad = Math.min((si.length * 10) + probabilidad, 98);
+            claseColor = probabilidad >= 70 ? "ambar" : "rojo";
+            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p>`;
+            recomendacion = "¡Confirma tu asistencia!";
         }
         
-        document.getElementById('refuerzos-section').style.display = (isAdmin || loggedInPlayer) && (showRefuerzosForce || matchInfo?.refuerzosAbiertos) ? 'block' : 'none';
+        document.getElementById('refuerzos-section').style.display = (isAdmin || loggedInPlayer) && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos) ? 'block' : 'none';
 
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i><span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span></li>`).join('');
         const pendienteHtml = pendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const noHtml = no.map(j => `<li><span class="status-icon icon-no">✖</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
-        
         const resultadoDiv = document.getElementById('resultado');
         resultadoDiv.className = 'resultado ' + claseColor;
-        if (overrideHtml) {
-            resultadoDiv.innerHTML = overrideHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
-        } else {
-            resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
-        }
+        resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
     }
 
     function renderTable() {
@@ -609,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!equipment) return fila.querySelector(`input[value="${oldStatus}"]`).checked = true;
                 updates[`/jugadores/${playerKey}/llevaBalon`] = equipment.balon === 'si' ? true : null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = equipment.petos === 'si' ? true : null;
-                if (player.equipo) {
+                if (player.equipo) { // Lógica de reequilibrio de equipos
                     const { jugadores } = currentDbData;
                     const equipos = { verde: [], naranja: [] };
                     Object.keys(jugadores).forEach(k => {
