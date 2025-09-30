@@ -98,6 +98,32 @@
         /* Estilos para el widget del tiempo */
         #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
         .weather-icon{font-size:1.5em;}
+        
+        /* --- NUEVOS ESTILOS PARA EL RESUMEN DE MATERIAL --- */
+        #equipment-summary {
+            text-align: center;
+            padding: 8px;
+            margin-bottom: 15px;
+            background-color: #e9ecef;
+            border-radius: 6px;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        #equipment-summary span {
+            margin: 0 10px;
+        }
+        .equipment-question {
+            margin-bottom: 15px;
+            text-align: left;
+            padding-left: 20%;
+        }
+        .equipment-question p {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .equipment-question label {
+            margin-right: 15px;
+        }
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
@@ -147,12 +173,14 @@
         <button id="reset-button" class="admin-only admin-button" style="display:none;">Resetear Asistencia</button>
         <button id="toggle-refuerzos-button" class="admin-only admin-button" style="display:none;"></button>
         
+        <div id="equipment-summary" style="display: none;"></div>
+
         <div id="resultado"></div>
         
         <div id="weather-forecast">Cargando previsión del tiempo...</div>
-       
+        
         <div style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
-          <a href="https://maps.app.goo.gl/VU5veJCgiJb78VAz5" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
+          <a href="http://googleusercontent.com/maps/google.com/0" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
         </div>
         
         <div id="refuerzos-section">
@@ -218,6 +246,26 @@
     </div>
 </div>
 
+<div id="equipment-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 class="modal-title">Material para el partido</h3>
+        <div class="equipment-question">
+            <p>¿Vas a llevar balón?</p>
+            <label><input type="radio" name="balon-radio" value="si"> Sí</label>
+            <label><input type="radio" name="balon-radio" value="no" checked> No</label>
+        </div>
+        <div class="equipment-question">
+            <p>¿Vas a llevar petos?</p>
+            <label><input type="radio" name="petos-radio" value="si"> Sí</label>
+            <label><input type="radio" name="petos-radio" value="no" checked> No</label>
+        </div>
+        <div class="modal-buttons" style="margin-top: 20px;">
+            <button id="equipment-cancel" class="modal-button cancel">Cancelar</button>
+            <button id="equipment-ok" class="modal-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -245,7 +293,7 @@ let loggedInPlayer = null;
 let currentDbData = null;
 let simulatedTime = null; 
 let isMatchPendingActivation = false;
-let weatherHasBeenFetched = false; // --- NUEVO: Bandera para controlar la carga del tiempo ---
+let weatherHasBeenFetched = false;
 
 // --- Sistema de Ventanas Modales Personalizadas ---
 function showCustomAlert(title, message, onOk) {
@@ -311,6 +359,35 @@ function showCustomPrompt(title) {
     });
 }
 
+// --- NUEVO: Función para el modal de material ---
+function showEquipmentModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('equipment-modal');
+        modal.style.display = 'flex';
+
+        // Resetear radios a 'no' por defecto
+        document.querySelector('input[name="balon-radio"][value="no"]').checked = true;
+        document.querySelector('input[name="petos-radio"][value="no"]').checked = true;
+
+        const okBtn = document.getElementById('equipment-ok');
+        const cancelBtn = document.getElementById('equipment-cancel');
+
+        const close = (value) => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(value);
+        };
+
+        okBtn.onclick = () => {
+            const balon = document.querySelector('input[name="balon-radio"]:checked').value;
+            const petos = document.querySelector('input[name="petos-radio"]:checked').value;
+            close({ balon, petos });
+        };
+        cancelBtn.onclick = () => close(null);
+    });
+}
+
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
@@ -371,7 +448,6 @@ document.addEventListener('DOMContentLoaded', function() {
             isMatchPendingActivation = ahora > activationTimeLimit;
             renderUI();
 
-            // --- CORREGIDO: Llamada a la función del tiempo ---
             if (!weatherHasBeenFetched) {
                 fetchAndDisplayWeather();
                 weatherHasBeenFetched = true;
@@ -423,11 +499,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     updates[`/jugadores/${playerKey}/status`] = 'no';
                     updates[`/jugadores/${playerKey}/bajas`] = (player.bajas || 0) + 1;
                     updates[`/jugadores/${playerKey}/lateBailoutThisMatch`] = true;
+                    updates[`/jugadores/${playerKey}/llevaBalon`] = null; // Limpiar material
+                    updates[`/jugadores/${playerKey}/llevaPetos`] = null;
                     database.ref().update(updates);
                 } else {
                     fila.querySelector(`input[value="si"]`).checked = true;
                 }
-            } else {
+            } else if (newStatus === 'si' && oldStatus !== 'si') {
+                const equipment = await showEquipmentModal();
+                if (equipment) {
+                    const updates = {};
+                    updates[`/jugadores/${playerKey}/status`] = 'si';
+                    updates[`/jugadores/${playerKey}/llevaBalon`] = equipment.balon === 'si' ? true : null;
+
+                    // Lógica para asegurar que solo una persona lleva petos
+                    if (equipment.petos === 'si') {
+                        const jugadores = currentDbData.jugadores || {};
+                        const currentBibsBringerKey = Object.keys(jugadores).find(key => jugadores[key].llevaPetos);
+                        if (currentBibsBringerKey && currentBibsBringerKey !== playerKey) {
+                            updates[`/jugadores/${currentBibsBringerKey}/llevaPetos`] = null;
+                        }
+                        updates[`/jugadores/${playerKey}/llevaPetos`] = true;
+                    } else {
+                        updates[`/jugadores/${playerKey}/llevaPetos`] = null; // Asegurarse de quitarlo si dice 'no'
+                    }
+                    database.ref().update(updates);
+                } else {
+                    // Si el usuario cancela el modal, revertir el radio button
+                    fila.querySelector(`input[value="${oldStatus}"]`).checked = true;
+                }
+            } else if (oldStatus === 'si' && newStatus !== 'si') {
+                // Si cambia de 'Sí' a cualquier otra cosa, limpiar su material
+                const updates = {};
+                updates[`/jugadores/${playerKey}/status`] = newStatus;
+                updates[`/jugadores/${playerKey}/llevaBalon`] = null;
+                updates[`/jugadores/${playerKey}/llevaPetos`] = null;
+                database.ref().update(updates);
+            } else if (newStatus !== oldStatus) {
+                // Otro cambio que no involucra pasar a 'Sí'
                 database.ref(`jugadores/${playerKey}/status`).set(newStatus);
             }
         }
@@ -478,6 +587,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 status: jugadores[key].status === 'pendiente' ? 'no' : jugadores[key].status
             };
             updates[`/jugadores/${key}/lateBailoutThisMatch`] = null; 
+            updates[`/jugadores/${key}/llevaBalon`] = null; // Limpiar material para el siguiente partido
+            updates[`/jugadores/${key}/llevaPetos`] = null;
         });
 
         const archiveData = {
@@ -512,6 +623,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const players = currentDbData.jugadores || {};
             Object.keys(players).forEach(key => {
                 updates[`/jugadores/${key}/status`] = 'pendiente';
+                updates[`/jugadores/${key}/llevaBalon`] = null;
+                updates[`/jugadores/${key}/llevaPetos`] = null;
             });
             database.ref().update(updates)
                 .then(() => showCustomAlert('Información', 'La asistencia ha sido reseteada.'))
@@ -665,7 +778,6 @@ function showPlayerReliability(playerKey) {
     showCustomAlert(`Fiabilidad de ${playerName}`, message);
 }
 
-// --- NUEVO: Función para obtener y mostrar el tiempo ---
 async function fetchAndDisplayWeather() {
     const weatherDiv = document.getElementById('weather-forecast');
     try {
@@ -673,8 +785,7 @@ async function fetchAndDisplayWeather() {
         const matchDate = getNextWednesday(ahora);
         const dateString = `${matchDate.getFullYear()}-${(matchDate.getMonth() + 1).toString().padStart(2, '0')}-${matchDate.getDate().toString().padStart(2, '0')}`;
         
-        // Coordenadas de Getafe
-        const lat = 40.31;
+        const lat = 40.31; // Coordenadas de Getafe
         const lon = -3.73;
         
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability&start_date=${dateString}&end_date=${dateString}`;
@@ -684,8 +795,7 @@ async function fetchAndDisplayWeather() {
         
         const data = await response.json();
         
-        // La hora del partido es 21:00, que corresponde al índice 21 en la respuesta de la API
-        const hourIndex = 21;
+        const hourIndex = 21; // Hora del partido (21:00)
         const temp = data.hourly.temperature_2m[hourIndex];
         const rain = data.hourly.precipitation_probability[hourIndex];
 
@@ -712,6 +822,7 @@ function renderUI() {
         document.getElementById('resultado').style.display = 'none';
         document.getElementById('tabla-jugadores').style.display = 'none';
         document.getElementById('refuerzos-section').style.display = 'none';
+        document.getElementById('equipment-summary').style.display = 'none'; // Ocultar también en pendiente
     } else {
         document.getElementById('pending-activation').style.display = 'none';
         document.getElementById('resultado').style.display = 'block';
@@ -723,6 +834,36 @@ function renderUI() {
 
 function renderSummary() {
     const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
+
+    // --- NUEVO: Lógica para el resumen de material ---
+    const equipmentDiv = document.getElementById('equipment-summary');
+    const ballBringers = [];
+    let bibsBringer = null;
+    if (jugadores) {
+        Object.values(jugadores).forEach(j => {
+            if (j.status === 'si' && j.llevaBalon) {
+                ballBringers.push(j.nombre.split(' ')[0]); // Usar solo el primer nombre
+            }
+            if (j.status === 'si' && j.llevaPetos) {
+                bibsBringer = j.nombre.split(' ')[0];
+            }
+        });
+    }
+    let equipmentHtml = '';
+    if (ballBringers.length > 0) {
+        equipmentHtml += `<span><b>Balón:</b> ${ballBringers.join(', ')}</span>`;
+    }
+    if (bibsBringer) {
+        equipmentHtml += `<span><b>Petos:</b> ${bibsBringer}</span>`;
+    }
+
+    if (equipmentHtml) {
+        equipmentDiv.innerHTML = equipmentHtml;
+        equipmentDiv.style.display = 'block';
+    } else {
+        equipmentDiv.style.display = 'none';
+    }
+
     const ahora = getCurrentTime();
     const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
     document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
@@ -786,7 +927,7 @@ function renderSummary() {
         claseColor = "rojo";
         const faltan = JUGADORES_NECESARIOS - totalConfirmados;
         overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>
-                        <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
+                            <p class="recomendacion">Imposible llegar a 10 con la plantilla. Se necesitan ${faltan} refuerzo(s).</p>`;
         showRefuerzosForce = true;
     } else {
         const cap = 98;
@@ -812,7 +953,7 @@ function renderSummary() {
         else { 
             claseColor = "rojo"; 
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p>
-                            <p class="recomendacion">🔥 La probabilidad de jugar es muy baja. Avisad a todos los amigos que podáis.<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small></p>`;
+                                <p class="recomendacion">🔥 La probabilidad de jugar es muy baja. Avisad a todos los amigos que podáis.<br><small style="font-style: italic;">👥 Abierta la inscripción de amigos.</small></p>`;
             showRefuerzosForce = true;
         }
 
@@ -965,8 +1106,17 @@ function applyVisibility() {
             fila.style.display = '';
         }
         fila.querySelectorAll('input, button').forEach(element => {
-             element.disabled = !(isAdmin || isPlayerRow);
+            // Permitir cambiar radio buttons pero no otros inputs si no es su fila
+            if (element.type === 'radio') {
+                element.disabled = !(isAdmin || isPlayerRow);
+            } else {
+                element.disabled = !isAdmin; // Solo admin puede cambiar bajas o borrar
+            }
         });
+        // Caso especial: re-habilitar los radio del jugador logueado si el admin está activo
+        if (isAdmin && isPlayerRow) {
+             fila.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = false);
+        }
     });
 }
 
