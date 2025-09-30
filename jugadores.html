@@ -71,7 +71,7 @@
 
         /* Iconos de estado */
         #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
-        #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px;}
+        #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px; flex-grow: 1;}
         .highlight-login {background-color:#fffbdd;border:1px solid #ffeb3b;padding:5px 10px;border-radius:5px;display:inline-block;margin-top:5px; text-align:right; width: calc(100% - 22px);}
         
         /* Secciones de admin */
@@ -105,11 +105,11 @@
         .equipment-question {margin-bottom: 15px;text-align: left;padding-left: 20%;}
         .equipment-question p {margin-bottom: 5px;font-weight: 600;}
         .equipment-question label {margin-right: 15px;}
-        .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px;}
+        .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
         #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
         #match-menu-icon.active {display:inline-block;}
         .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
-        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1;border-radius:5px;margin-left:-80px;cursor:pointer;}
+        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1001;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
         #match-menu-dropdown:hover {background-color:#f1f1f1;}
         .team-modal-container {display:flex;justify-content:space-around;text-align:left;}
         .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
@@ -275,7 +275,6 @@
     </div>
 </div>
 
-
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -387,7 +386,7 @@ function showTeamsModal() {
     const jugadores = currentDbData.jugadores || {};
     
     const equipoVerde = [], equipoNaranja = [];
-    Object.values(jugadores).forEach(j => {
+    Object.values(jugadores).sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(j => {
         if (j.status === 'si' && j.equipo) {
             if (j.equipo === 'verde') equipoVerde.push(j.nombre);
             else if (j.equipo === 'naranja') equipoNaranja.push(j.nombre);
@@ -453,6 +452,237 @@ document.getElementById('player-login-wrapper').addEventListener('click', async 
 
 // --- LÓGICA PRINCIPAL Y EVENTOS ---
 document.addEventListener('DOMContentLoaded', function() {
+
+    // --- FUNCIONES AUXILIARES Y DE CÁLCULO (definidas dentro para evitar problemas de scope) ---
+    function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
+
+    function getNextWednesday(now, forceNextWeek = false) {
+        const d = new Date(now);
+        const today = d.getDay();
+        let offset = (3 - today + 7) % 7;
+        const newDate = new Date(d);
+        newDate.setDate(d.getDate() + offset);
+        if ((offset === 0 && d.getHours() >= 22) || forceNextWeek) {
+            newDate.setDate(newDate.getDate() + 7);
+        }
+        newDate.setHours(21, 0, 0, 0);
+        return newDate;
+    }
+
+    function checkLateBailoutConditions(oldStatus, newStatus, player) {
+        if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) {
+            return false;
+        }
+        const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const ahora = getCurrentTime();
+        const matchDate = new Date(matchInfo.nextMatchDate);
+        const wednesdayCutoff = new Date(matchDate);
+        wednesdayCutoff.setHours(14, 0, 0, 0);
+        if (ahora < wednesdayCutoff) {
+            return false;
+        }
+        const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
+        return totalConfirmados >= 10;
+    }
+    
+    // --- FUNCIONES DE RENDERIZADO ---
+    function renderUI() {
+        if (!currentDbData) return;
+        document.getElementById('main-content').style.display = 'block';
+
+        if (isMatchPendingActivation && !isAdmin) {
+            document.getElementById('pending-activation').style.display = 'block';
+            document.getElementById('resultado').style.display = 'none';
+            document.getElementById('tabla-jugadores').style.display = 'none';
+            document.getElementById('refuerzos-section').style.display = 'none';
+            document.getElementById('equipment-summary').style.display = 'none';
+        } else {
+            document.getElementById('pending-activation').style.display = 'none';
+            document.getElementById('resultado').style.display = 'block';
+            renderSummary();
+            renderTable();
+        }
+        applyVisibility();
+    }
+
+    function renderSummary() {
+        const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
+        const equipmentDiv = document.getElementById('equipment-summary');
+        const ballBringers = [];
+        let bibsBringer = null;
+        if (jugadores) {
+            Object.values(jugadores).forEach(j => {
+                if (j.status === 'si' && j.llevaBalon) ballBringers.push(j.nombre.split(' ')[0]);
+                if (j.status === 'si' && j.llevaPetos) bibsBringer = j.nombre.split(' ')[0];
+            });
+        }
+        let equipmentHtml = '';
+        if (ballBringers.length > 0) equipmentHtml += `<span><b>Balón:</b> ${ballBringers.join(', ')}</span>`;
+        if (bibsBringer) equipmentHtml += `<span><b>Petos:</b> ${bibsBringer}</span>`;
+        equipmentDiv.innerHTML = equipmentHtml;
+        equipmentDiv.style.display = equipmentHtml ? 'block' : 'none';
+
+        const ahora = getCurrentTime();
+        const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
+        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+
+        const listaSi = [], listaPendiente = [], listaNo = [];
+        const jugadoresObj = jugadores || {};
+        Object.keys(jugadoresObj).forEach(key => {
+            const j = {...jugadoresObj[key], key: key};
+            if (j.status === 'si') listaSi.push(j);
+            else if (j.status === 'no') listaNo.push(j);
+            else listaPendiente.push(j);
+        });
+        
+        const sortByName = (a, b) => a.nombre.localeCompare(b.nombre);
+        listaSi.sort(sortByName);
+        listaPendiente.sort(sortByName);
+        listaNo.sort(sortByName);
+
+        const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
+        const totalConfirmados = listaSi.length + listaRefuerzos.length;
+
+        const menuIcon = document.getElementById('match-menu-icon');
+        const notificationDot = menuIcon.querySelector('.notification-dot');
+        if (totalConfirmados >= 10 && (loggedInPlayer || isAdmin)) {
+            menuIcon.classList.add('active');
+            const tienenEquipo = listaSi.some(j => j.equipo);
+            notificationDot.style.display = tienenEquipo ? 'none' : 'block';
+        } else {
+            menuIcon.classList.remove('active');
+            document.getElementById('match-menu-dropdown').style.display = 'none';
+        }
+
+        let probabilidad, recomendacion, claseColor, overrideHtml = null;
+        let showRefuerzosForce = false;
+        const maximoPosiblePlantilla = listaSi.length + listaPendiente.length;
+
+        let proyeccionPendientes = 0;
+        if (listaPendiente.length > 0) {
+            const last4MatchesKeys = Object.keys(historial || {}).sort().slice(-4);
+            listaPendiente.forEach(jugador => {
+                let attended = 0;
+                last4MatchesKeys.forEach(matchKey => {
+                    if (historial[matchKey]?.jugadores?.[jugador.key]?.status === 'si') attended++;
+                });
+                const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
+                proyeccionPendientes += 10 * Math.max(fiabilidadReal, 0.1);
+            });
+        }
+        probabilidad = (listaSi.length * 10) + proyeccionPendientes;
+
+        if (totalConfirmados >= 10) {
+            claseColor = "verde";
+            recomendacion = `Ya sois ${totalConfirmados}.`;
+            overrideHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
+        } else if (maximoPosiblePlantilla < 10) {
+            claseColor = "rojo";
+            overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p><p class="recomendacion">Imposible llegar a 10. Se necesitan ${10 - totalConfirmados} refuerzo(s).</p>`;
+            showRefuerzosForce = true;
+        } else {
+            probabilidad = Math.min(probabilidad, 98);
+            if (probabilidad >= 70) { claseColor = "ambar"; recomendacion = "Por favor, confirmar lo antes posible."; }
+            else { 
+                claseColor = "rojo"; 
+                overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Peligro</p><p class="recomendacion">🔥 La probabilidad es baja. ¡Avisad a amigos!</p>`;
+                showRefuerzosForce = true;
+            }
+        }
+        
+        let isRefuerzosOpen = isAdmin || showRefuerzosForce || matchInfo?.refuerzosAbiertos;
+        document.getElementById('refuerzos-section').style.display = isRefuerzosOpen && (loggedInPlayer || isAdmin) ? 'block' : 'none';
+
+        const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
+        const refuerzosHtml = listaRefuerzos.map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i></li>`).join('');
+        const pendienteHtml = listaPendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
+        const noHtml = listaNo.map(j => `<li><span class="status-icon icon-no">✖</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
+        
+        const resultadoDiv = document.getElementById('resultado');
+        resultadoDiv.className = 'resultado ' + claseColor;
+        const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
+        
+        if (overrideHtml) {
+            resultadoDiv.innerHTML = overrideHtml + listaHtml;
+        } else {
+            resultadoDiv.innerHTML = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.4em;">probabilidad</span></p><p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        }
+    }
+    
+    function renderTable() {
+        const tablaBody = document.querySelector("#tabla-jugadores tbody");
+        tablaBody.innerHTML = '';
+        const jugadores = currentDbData.jugadores || {};
+        const history = currentDbData.historial || {};
+        const last4Matches = Object.keys(history).sort().slice(-4);
+
+        Object.keys(jugadores).sort((a,b) => jugadores[a].nombre.localeCompare(jugadores[b].nombre)).forEach(key => {
+            const jugador = jugadores[key];
+            let attended = 0;
+            last4Matches.forEach(matchKey => {
+                if (history[matchKey]?.jugadores?.[key]?.status === 'si') attended++;
+            });
+            const fiabilidad = last4Matches.length > 0 ? `${(attended / last4Matches.length * 100).toFixed(0)}%` : 'N/A';
+            const status = jugador.status || 'pendiente';
+            const fila = `
+                <tr data-key="${key}">
+                    <td>${jugador.nombre}</td>
+                    <td><div class="status-radio">
+                        <label><input type="radio" name="status-${key}" value="si" ${status === 'si' ? 'checked' : ''}> Sí</label>
+                        <label><input type="radio" name="status-${key}" value="no" ${status === 'no' ? 'checked' : ''}> No</label>
+                        <label><input type="radio" name="status-${key}" value="pendiente" ${status === 'pendiente' ? 'checked' : ''}> Pendiente</label>
+                    </div></td>
+                    <td class="admin-only"><input type="number" class="bajas" value="${jugador.bajas || 0}" min="0"></td>
+                    <td class="fiabilidad">${fiabilidad}</td>
+                    <td class="admin-only"><button class="delete-player-btn" title="Eliminar a ${jugador.nombre}">🗑️</button></td>
+                </tr>`;
+            tablaBody.innerHTML += fila;
+        });
+    }
+
+    function applyVisibility() {
+        document.body.classList.toggle('admin-view', isAdmin);
+        const isLoggedIn = isAdmin || loggedInPlayer;
+        document.getElementById('whatsapp-button').style.display = isLoggedIn ? 'flex' : 'none';
+        const tablaVisible = isLoggedIn && !isMatchPendingActivation;
+        document.getElementById('tabla-jugadores').style.display = tablaVisible ? '' : 'none';
+
+        document.querySelectorAll('#tabla-jugadores tbody tr').forEach(fila => {
+            const key = fila.dataset.key;
+            const isPlayerRow = loggedInPlayer && loggedInPlayer.key === key;
+            if (loggedInPlayer && !isAdmin) {
+                fila.style.display = isPlayerRow ? '' : 'none';
+            } else {
+                fila.style.display = '';
+            }
+            fila.querySelectorAll('input, button').forEach(element => {
+                if (element.type === 'radio') element.disabled = !(isAdmin || isPlayerRow);
+                else element.disabled = !isAdmin;
+            });
+            if (isAdmin && isPlayerRow) {
+                 fila.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = false);
+            }
+        });
+    }
+
+    async function fetchAndDisplayWeather() {
+        const weatherDiv = document.getElementById('weather-forecast');
+        try {
+            const matchDate = getNextWednesday(getCurrentTime());
+            const dateString = `${matchDate.getFullYear()}-${(matchDate.getMonth() + 1).toString().padStart(2, '0')}-${matchDate.getDate().toString().padStart(2, '0')}`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=40.31&longitude=-3.73&hourly=temperature_2m,precipitation_probability&start_date=${dateString}&end_date=${dateString}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch');
+            const data = await response.json();
+            const temp = data.hourly.temperature_2m[21];
+            const rain = data.hourly.precipitation_probability[21];
+            weatherDiv.innerHTML = `<span>Previsión:</span><span class="weather-icon">🌡️</span><span>${temp.toFixed(0)}°C</span><span class="weather-icon">💧</span><span>${rain}%</span>`;
+        } catch (error) {
+            weatherDiv.textContent = 'No se pudo cargar la previsión del tiempo.';
+        }
+    }
+
+    // --- Listener principal de Firebase ---
     database.ref().on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.jugadores) {
@@ -470,6 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // --- Event Listeners de la Interfaz ---
     document.getElementById('tabla-jugadores').addEventListener('click', (e) => {
         const fila = e.target.closest('tr');
         if (!fila) return;
@@ -477,9 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!playerKey || !e.target.classList.contains('delete-player-btn')) return;
         const jugador = currentDbData.jugadores[playerKey];
         if (confirm(`¿Seguro que quieres eliminar a ${jugador.nombre} de la plantilla?\nEsta acción es permanente.`)) {
-            database.ref('jugadores/' + playerKey).remove()
-                .then(() => showCustomAlert('Información', `${jugador.nombre} ha sido eliminado.`))
-                .catch(error => showCustomAlert('Error', "Error al eliminar: " + error.message));
+            database.ref('jugadores/' + playerKey).remove();
         }
     });
     
@@ -495,16 +724,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const newStatus = target.value;
             const player = currentDbData.jugadores[playerKey];
             const oldStatus = player.status;
-
-            const isLateBailout = checkLateBailoutConditions(oldStatus, newStatus, player);
             const updates = {};
             
-            if (isLateBailout) {
-                const confirmed = await showCustomConfirm('Confirmación', '¿Estás seguro de cambiar tu respuesta?\nTu decisión afectará a la celebración del partido');
-                if (confirmed) {
-                    showCustomAlert('Aviso Importante', 'Por favor, avisa en el grupo de WhatsApp que no puedes ir.', () => {
-                        if (WHATSAPP_GROUP_LINK) window.open(WHATSAPP_GROUP_LINK, '_blank');
-                    });
+            if (checkLateBailoutConditions(oldStatus, newStatus, player)) {
+                if (await showCustomConfirm('Confirmación', '¿Seguro?\nTu decisión afectará al partido.')) {
                     updates[`/jugadores/${playerKey}/status`] = 'no';
                     updates[`/jugadores/${playerKey}/bajas`] = (player.bajas || 0) + 1;
                     updates[`/jugadores/${playerKey}/lateBailoutThisMatch`] = true;
@@ -528,35 +751,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         updates[`/jugadores/${playerKey}/llevaPetos`] = null;
                     }
-                    
-                    // Lógica de reequilibrio de equipos si es necesario
                     if (player.equipo) {
                         const { jugadores } = currentDbData;
-                        const equipoVerde = [], equipoNaranja = [];
+                        const equipos = { verde: [], naranja: [] };
                         Object.keys(jugadores).forEach(k => {
                             const j = jugadores[k];
-                            if ((j.status === 'si' || k === playerKey) && j.equipo) {
-                                if (j.equipo === 'verde') equipoVerde.push({key: k, ...j});
-                                else equipoNaranja.push({key: k, ...j});
-                            }
+                            if ((j.status === 'si' || k === playerKey) && j.equipo) equipos[j.equipo].push({key: k, ...j});
                         });
-
-                        let equipoAbarrotado, otroEquipo, nuevoEquipo;
-                        if (Math.abs(equipoVerde.length - equipoNaranja.length) > 1) {
-                            if (equipoVerde.length > equipoNaranja.length) {
-                                equipoAbarrotado = equipoVerde;
-                                nuevoEquipo = 'naranja';
-                            } else {
-                                equipoAbarrotado = equipoNaranja;
-                                nuevoEquipo = 'verde';
-                            }
-                            // Excluir al jugador actual y encontrar al último que confirmó
-                            const candidatos = equipoAbarrotado.filter(j => j.key !== playerKey);
-                            if (candidatos.length > 0) {
-                                candidatos.sort((a, b) => b.confirmTimestamp - a.confirmTimestamp);
-                                const jugadorAMover = candidatos[0];
-                                updates[`/jugadores/${jugadorAMover.key}/equipo`] = nuevoEquipo;
-                            }
+                        if (Math.abs(equipos.verde.length - equipos.naranja.length) > 1) {
+                            const [abarrotado, nuevo] = equipos.verde.length > equipos.naranja.length ? [equipos.verde, 'naranja'] : [equipos.naranja, 'verde'];
+                            const jugadorAMover = abarrotado.filter(j => j.key !== playerKey).sort((a, b) => b.confirmTimestamp - a.confirmTimestamp)[0];
+                            if(jugadorAMover) updates[`/jugadores/${jugadorAMover.key}/equipo`] = nuevo;
                         }
                     }
                     await database.ref().update(updates);
@@ -569,24 +774,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 updates[`/jugadores/${playerKey}/llevaPetos`] = null;
                 await database.ref().update(updates);
             } else if (newStatus !== oldStatus) {
-                updates[`/jugadores/${playerKey}/status`] = newStatus;
-                await database.ref().update(updates);
+                database.ref(`jugadores/${playerKey}/status`).set(newStatus);
             }
         }
     });
 
-    // --- Eventos del menú de partido ---
     document.getElementById('match-menu-icon').addEventListener('click', () => {
         const dropdown = document.getElementById('match-menu-dropdown');
         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
     });
+    
     document.getElementById('match-menu-dropdown').addEventListener('click', async () => {
         document.getElementById('match-menu-dropdown').style.display = 'none';
         const jugadores = currentDbData.jugadores || {};
         const jugadoresSi = Object.entries(jugadores).filter(([k, j]) => j.status === 'si');
         const tienenEquipo = jugadoresSi.some(([k, j]) => j.equipo);
 
-        if (!tienenEquipo) { // Primera vez que se generan
+        if (!tienenEquipo) {
             const shuffledKeys = jugadoresSi.map(([k, j]) => k).sort(() => 0.5 - Math.random());
             const mid = Math.ceil(shuffledKeys.length / 2);
             const updates = {};
@@ -599,198 +803,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Resto de listeners...
-    document.getElementById('apply-test-date').addEventListener('click', () => {
-        simulatedTime = document.getElementById('test-date').value ? new Date(document.getElementById('test-date').value) : null;
-        renderUI();
+    document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
+        const nombre = document.getElementById('refuerzo-nombre').value.trim();
+        if(nombre && (isAdmin || loggedInPlayer)) { 
+            database.ref('refuerzos').push({ nombre: nombre, anadidoPor: isAdmin ? 'Admin' : loggedInPlayer.nombre }); 
+            document.getElementById('refuerzo-nombre').value = ''; 
+        } else { 
+            showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo."); 
+        }
     });
-    document.getElementById('reset-test-date').addEventListener('click', () => {
-        simulatedTime = null;
-        document.getElementById('test-date').value = '';
-        renderUI();
-    });
-    document.getElementById('archive-button').addEventListener('click', async () => { /* ... código sin cambios ... */ });
-    document.getElementById('reset-button').addEventListener('click', () => { /* ... código sin cambios ... */ });
-    document.getElementById('toggle-refuerzos-button').addEventListener('click', () => { /* ... código sin cambios ... */ });
-    document.getElementById('add-refuerzo-btn').addEventListener('click', () => { /* ... código sin cambios ... */ });
-    document.getElementById('add-player-btn').addEventListener('click', async () => { /* ... código sin cambios ... */ });
-    document.body.addEventListener('click', function(e) { /* ... código sin cambios ... */ });
-});
 
-
-// --- FUNCIONES AUXILIARES Y DE CÁLCULO ---
-function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
-
-function checkLateBailoutConditions(oldStatus, newStatus, player) {
-    if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) {
-        return false;
-    }
-    const { jugadores, refuerzos, matchInfo } = currentDbData;
-    const ahora = getCurrentTime();
-    const matchDate = new Date(matchInfo.nextMatchDate);
-
-    // --- LÓGICA MODIFICADA: La penalización es desde el miércoles a las 14:00 ---
-    const wednesdayCutoff = new Date(matchDate);
-    wednesdayCutoff.setHours(14, 0, 0, 0);
-
-    if (ahora < wednesdayCutoff) {
-        return false; // No hay penalización antes de la hora límite
-    }
-    
-    const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
-    return totalConfirmados >= 10;
-}
-
-function showPlayerReliability(playerKey) { /* ... código sin cambios ... */ }
-async function fetchAndDisplayWeather() { /* ... código sin cambios ... */ }
-
-// --- FUNCIONES DE RENDERIZADO ---
-function renderUI() {
-    if (!currentDbData) return;
-    document.getElementById('main-content').style.display = 'block';
-
-    if (isMatchPendingActivation && !isAdmin) {
-        document.getElementById('pending-activation').style.display = 'block';
-        document.getElementById('resultado').style.display = 'none';
-        document.getElementById('tabla-jugadores').style.display = 'none';
-        document.getElementById('refuerzos-section').style.display = 'none';
-        document.getElementById('equipment-summary').style.display = 'none';
-    } else {
-        document.getElementById('pending-activation').style.display = 'none';
-        document.getElementById('resultado').style.display = 'block';
-        renderSummary();
-        renderTable();
-    }
-    applyVisibility();
-}
-
-function renderSummary() {
-    const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
-
-    const equipmentDiv = document.getElementById('equipment-summary');
-    const ballBringers = [];
-    let bibsBringer = null;
-    if (jugadores) {
-        Object.values(jugadores).forEach(j => {
-            if (j.status === 'si' && j.llevaBalon) ballBringers.push(j.nombre.split(' ')[0]);
-            if (j.status === 'si' && j.llevaPetos) bibsBringer = j.nombre.split(' ')[0];
+    document.getElementById('add-player-btn').addEventListener('click', async () => {
+        const newName = document.getElementById('new-player-name').value.trim();
+        if (!newName) return showCustomAlert('Aviso', "Introduce un nombre.");
+        const newPassword = await showCustomPrompt(`Contraseña para ${newName}`);
+        if (!newPassword) return;
+        database.ref('jugadores').push({ nombre: newName, password: newPassword, status: "pendiente", bajas: 0 }).then(() => { 
+            showCustomAlert('Información', `${newName} añadido.`); 
+            document.getElementById('new-player-name').value = ''; 
         });
-    }
-    let equipmentHtml = '';
-    if (ballBringers.length > 0) equipmentHtml += `<span><b>Balón:</b> ${ballBringers.join(', ')}</span>`;
-    if (bibsBringer) equipmentHtml += `<span><b>Petos:</b> ${bibsBringer}</span>`;
-
-    if (equipmentHtml) {
-        equipmentDiv.innerHTML = equipmentHtml;
-        equipmentDiv.style.display = 'block';
-    } else {
-        equipmentDiv.style.display = 'none';
-    }
-
-    const ahora = getCurrentTime();
-    const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
-    document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
-
-    const listaSi = [], listaPendiente = [], listaNo = [];
-    const jugadoresObj = jugadores || {};
-    Object.keys(jugadoresObj).forEach(key => {
-        const j = {...jugadoresObj[key], key: key};
-        if (j.status === 'si') listaSi.push(j);
-        else if (j.status === 'no') listaNo.push(j);
-        else listaPendiente.push(j);
     });
-    
-    // --- Lógica del menú de partido ---
-    const totalConfirmados = listaSi.length + (refuerzos ? Object.keys(refuerzos).length : 0);
-    const menuIcon = document.getElementById('match-menu-icon');
-    const notificationDot = menuIcon.querySelector('.notification-dot');
 
-    if (totalConfirmados >= 10 && (loggedInPlayer || isAdmin)) {
-        menuIcon.classList.add('active');
-        const tienenEquipo = listaSi.some(j => j.equipo);
-        notificationDot.style.display = tienenEquipo ? 'none' : 'block';
-    } else {
-        menuIcon.classList.remove('active');
-        document.getElementById('match-menu-dropdown').style.display = 'none';
-    }
-    
-    /* ... resto del código de renderSummary sin cambios ... */
-}
-
-function renderTable() { /* ... código sin cambios ... */ }
-
-function applyVisibility() { /* ... código sin cambios ... */ }
-
-function getNextWednesday(now, forceNextWeek = false) { /* ... código sin cambios ... */ }
-
-
-// --- RELLENOS PARA FUNCIONES SIN CAMBIOS PARA EVITAR ERRORES DE SCRIPT ---
-document.getElementById('archive-button').addEventListener('click', async () => {
-    if (!isAdmin || !isMatchPendingActivation || !confirm('¿Estás seguro de que quieres archivar este partido y activar el siguiente?')) return;
-    const ahora = getCurrentTime();
-    const { jugadores, refuerzos, matchInfo } = currentDbData;
-    const oldMatchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
-    const pad = (num) => num.toString().padStart(2, '0');
-    const matchKey = `${oldMatchDate.getFullYear()}-${pad(oldMatchDate.getMonth() + 1)}-${pad(oldMatchDate.getDate())}`;
-    const listaSi = Object.values(jugadores).filter(j => j.status === 'si');
-    const totalConfirmados = listaSi.length + (refuerzos ? Object.keys(refuerzos).length : 0);
-    const historialJugadores = {};
-    const updates = {};
-    Object.keys(jugadores).forEach(key => {
-        historialJugadores[key] = { nombre: jugadores[key].nombre, status: jugadores[key].status === 'pendiente' ? 'no' : jugadores[key].status };
-        updates[`/jugadores/${key}/lateBailoutThisMatch`] = null; 
-        updates[`/jugadores/${key}/llevaBalon`] = null;
-        updates[`/jugadores/${key}/llevaPetos`] = null;
-        updates[`/jugadores/${key}/equipo`] = null; // Limpiar equipos
-        updates[`/jugadores/${key}/confirmTimestamp`] = null;
+    document.getElementById('archive-button').addEventListener('click', async () => {
+        if (!isAdmin || !isMatchPendingActivation || !confirm('¿Archivar este partido y activar el siguiente?')) return;
+        const ahora = getCurrentTime();
+        const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const updates = {};
+        Object.keys(jugadores).forEach(key => {
+            updates[`/jugadores/${key}/status`] = 'pendiente';
+            updates[`/jugadores/${key}/lateBailoutThisMatch`] = null; 
+            updates[`/jugadores/${key}/llevaBalon`] = null;
+            updates[`/jugadores/${key}/llevaPetos`] = null;
+            updates[`/jugadores/${key}/equipo`] = null;
+            updates[`/jugadores/${key}/confirmTimestamp`] = null;
+        });
+        updates['/refuerzos'] = null;
+        updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
+        updates['/matchInfo/refuerzosAbiertos'] = null;
+        await database.ref().update(updates);
+        showCustomAlert('Información', 'Partido archivado y nuevo partido activado.');
     });
-    updates[`/historial/${matchKey}`] = { jugadores: historialJugadores, refuerzos: refuerzos || null, cancelado: totalConfirmados < 10, con_extras: totalConfirmados >= 10 && listaSi.length < 10 };
-    Object.keys(jugadores).forEach(key => { updates[`/jugadores/${key}/status`] = 'pendiente'; });
-    updates['/refuerzos'] = null;
-    updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
-    updates['/matchInfo/refuerzosAbiertos'] = null;
-    try { await database.ref().update(updates); showCustomAlert('Información', 'Partido archivado y nuevo partido activado.'); } 
-    catch (error) { showCustomAlert('Error', 'Error al archivar: ' + error.message); }
-});
-document.getElementById('reset-button').addEventListener('click', () => {
-    if (!isAdmin || !confirm('¿Poner a todos en "Pendiente"?')) return;
-    const updates = {};
-    Object.keys(currentDbData.jugadores || {}).forEach(key => {
-        updates[`/jugadores/${key}/status`] = 'pendiente';
-        updates[`/jugadores/${key}/llevaBalon`] = null;
-        updates[`/jugadores/${key}/llevaPetos`] = null;
-        updates[`/jugadores/${key}/equipo`] = null;
-        updates[`/jugadores/${key}/confirmTimestamp`] = null;
+
+    document.getElementById('reset-button').addEventListener('click', () => {
+        if (!isAdmin || !confirm('¿Poner a todos en "Pendiente"?')) return;
+        const updates = {};
+        Object.keys(currentDbData.jugadores || {}).forEach(key => {
+            updates[`/jugadores/${key}/status`] = 'pendiente';
+            updates[`/jugadores/${key}/llevaBalon`] = null;
+            updates[`/jugadores/${key}/llevaPetos`] = null;
+            updates[`/jugadores/${key}/equipo`] = null;
+            updates[`/jugadores/${key}/confirmTimestamp`] = null;
+        });
+        database.ref().update(updates);
     });
-    database.ref().update(updates).then(() => showCustomAlert('Información', 'Asistencia reseteada.')).catch(e => showCustomAlert('Error', e.message));
 });
-document.getElementById('toggle-refuerzos-button').addEventListener('click', () => { if (!isAdmin) return; database.ref('matchInfo/refuerzosAbiertos').set(!currentDbData.matchInfo?.refuerzosAbiertos); });
-document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
-    const nombre = document.getElementById('refuerzo-nombre').value.trim();
-    if(nombre && (isAdmin || loggedInPlayer)) { database.ref('refuerzos').push({ nombre: nombre, anadidoPor: isAdmin ? 'Admin' : loggedInPlayer.nombre }); document.getElementById('refuerzo-nombre').value = ''; }
-    else { showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo."); }
-});
-document.getElementById('add-player-btn').addEventListener('click', async () => {
-    const newName = document.getElementById('new-player-name').value.trim();
-    if (!newName) return showCustomAlert('Aviso', "Introduce un nombre.");
-    const newPassword = await showCustomPrompt(`Contraseña para ${newName}`);
-    if (!newPassword) return;
-    database.ref('jugadores').push({ nombre: newName, password: newPassword, status: "pendiente", bajas: 0 }).then(() => { showCustomAlert('Información', `${newName} añadido.`); document.getElementById('new-player-name').value = ''; }).catch(e => showCustomAlert('Error', e.message));
-});
-document.body.addEventListener('click', function(e) {
-    if (e.target.closest('.delete-refuerzo')) {
-        const el = e.target.closest('.delete-refuerzo');
-        if (isAdmin || (loggedInPlayer && loggedInPlayer.nombre === el.dataset.owner)) { if (confirm('¿Quitar refuerzo?')) database.ref('refuerzos/' + el.dataset.key).remove(); }
-        else { showCustomAlert('Aviso', 'Solo el admin o quien lo añadió puede borrarlo.'); }
-    } else if (e.target.closest('#prob-info-icon')) { showCustomAlert('Información', 'Estadísticas y datos...'); }
-    else if (e.target.classList.contains('summary-player-name')) { showPlayerReliability(e.target.dataset.key); }
-    else if (e.target.closest('#whatsapp-button')) { window.open(WHATSAPP_GROUP_LINK, '_blank'); }
-});
-function showPlayerReliability(playerKey) { /* Código completo original */ }
-async function fetchAndDisplayWeather() { /* Código completo original */ }
-function renderTable() { /* Código completo original */ }
-function applyVisibility() { /* Código completo original */ }
-function getNextWednesday(now, forceNextWeek = false) { /* Código completo original */ }
 </script>
 </body>
 </html>
