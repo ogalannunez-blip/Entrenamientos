@@ -5,135 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
-        /* Estilos generales */
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
-        .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 80px;}
-        
-        /* Encabezados */
-        h1,h2{text-align:center;color:#1a73e8}
-        h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
-        .date-header{display:flex;justify-content:center;align-items:center;gap:15px;}
-        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px; flex-grow: 1;}
-        
-        /* Iconos y etiquetas de Login */
-        .login-controls{display:flex;justify-content:center;gap:30px;align-items:flex-start;}
-        .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
-        .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
-        
-        /* Tabla de jugadores */
-        table{width:100%;border-collapse:collapse;margin-top:20px}
-        th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
-        th{background-color:#f2f2f2}
-        .summary-player-name {cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-thickness:1px;}
-        .summary-player-name:hover {color:#1a73e8;}
-        
-        /* Entradas y botones */
-        input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
-        input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}
-        .status-radio{display:flex;gap:10px;justify-content:flex-start}
-        .admin-button{width:calc(100% - 20px);padding:10px;margin:0 10px 15px 10px;background-color:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;}
-        .admin-button:hover{opacity:0.9;}
+    /* Estilos generales */
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f4f7f6;color:#333;margin:0;padding:10px}
+    .container{max-width:800px;margin:auto;background-color:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1); padding-bottom: 80px;}
+    
+    /* Encabezados */
+    h1,h2{text-align:center;color:#1a73e8}
+    h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
+    .date-header{display:flex;justify-content:center;align-items:center;gap:15px;}
+    h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px; flex-grow: 1;}
+    
+    /* Iconos y etiquetas de Login */
+    .login-controls{display:flex;justify-content:center;gap:30px;align-items:flex-start;}
+    .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+    .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
+    
+    /* Tabla de jugadores */
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
+    th{background-color:#f2f2f2}
+    .summary-player-name {cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-thickness:1px;}
+    .summary-player-name:hover {color:#1a73e8;}
+    
+    /* Entradas y botones */
+    input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
+    input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}
+    .status-radio{display:flex;gap:10px;justify-content:flex-start}
+    .admin-button{width:calc(100% - 20px);padding:10px;margin:0 10px 15px 10px;background-color:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;}
+    .admin-button:hover{opacity:0.9;}
 
-        /* Cuadro de resumen */
-        .resultado, #pending-activation{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}
-        .probabilidad{font-size:2.5em;font-weight:700;margin:0}
-        .recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}
-        .resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}
-        .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
-        .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
-        
-        /* Icono de información */
-        .info-icon-svg {display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;opacity:1;transition:transform 0.2s ease-in-out;fill:#1a73e8;height:18px;width:18px;}
-        .info-icon-svg:hover {transform:scale(1.1);}
-        
-        /* Botón de WhatsApp */
-        #whatsapp-button{position:fixed;bottom:20px;right:20px;background-color:#25D366;color:white;border:none;border-radius:50%;width:50px;height:50px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.3);transition:transform .2s;z-index:100;}
-        #whatsapp-button:hover{transform:scale(1.1);}
-        #whatsapp-button svg{width:28px;height:28px;fill:white;}
+    /* Cuadro de resumen */
+    .resultado, #pending-activation{padding:20px;margin-top:10px;border-radius:8px;text-align:center;color:#fff;transition:background-color .3s ease}
+    .probabilidad{font-size:2.5em;font-weight:700;margin:0}
+    .recomendacion{font-size:1.1em;font-weight:400;margin-top:10px}
+    .resumen,.lista-apuntados{font-size:.9em;font-weight:400;margin-top:15px;opacity:.9;border-top:1px solid rgba(255,255,255,.3);padding-top:10px}
+    .lista-apuntados{text-align:left;list-style:none;padding-left:0;}
+    .lista-apuntados li{display:flex;align-items:center;padding:3px 0;}
+    
+    /* Icono de información */
+    .info-icon-svg {display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;opacity:1;transition:transform 0.2s ease-in-out;fill:#1a73e8;height:18px;width:18px;}
+    .info-icon-svg:hover {transform:scale(1.1);}
+    
+    /* Botón de WhatsApp */
+    #whatsapp-button{position:fixed;bottom:20px;right:20px;background-color:#25D366;color:white;border:none;border-radius:50%;width:50px;height:50px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.3);transition:transform .2s;z-index:100;}
+    #whatsapp-button:hover{transform:scale(1.1);}
+    #whatsapp-button svg{width:28px;height:28px;fill:white;}
 
-        /* Iconos de acción */
-        .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
-        .delete-refuerzo{margin-left:auto;}
-        .delete-refuerzo:hover, .delete-player-btn:hover{opacity:1;}
-        .delete-player-btn {background:none; border:none; padding:0 5px; font-size:1.2em;}
-        
-        /* Colores del resumen */
-        .verde{background-color:#28a745}
-        .ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}
-        .rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}
-        #pending-activation{background-color:#6c757d;}
-        
-        /* Visibilidad de Admin */
-        .admin-only{display:none}
-        .admin-view .admin-only{display:table-cell !important;}
-        .admin-view .admin-button{display:block !important;}
-        .admin-view #add-player-section{display:block !important;}
+    /* Iconos de acción */
+    .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
+    .delete-refuerzo{margin-left:auto;}
+    .delete-refuerzo:hover, .delete-player-btn:hover{opacity:1;}
+    .delete-player-btn {background:none; border:none; padding:0 5px; font-size:1.2em;}
+    
+    /* Colores del resumen */
+    .verde{background-color:#28a745}
+    .ambar{background:linear-gradient(45deg,#ffc107,#ff9800);color:#333}
+    .rojo{background:linear-gradient(45deg,#dc3545,#b71c1c)}
+    #pending-activation{background-color:#6c757d;}
+    
+    /* Visibilidad de Admin */
+    .admin-only{display:none}
+    .admin-view .admin-only{display:table-cell !important;}
+    .admin-view .admin-button{display:block !important;}
+    .admin-view #add-player-section{display:block !important;}
 
-        /* Iconos de estado */
-        #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
-        #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px; flex-grow: 1;}
-        .highlight-login {background-color:#fffbdd;border:1px solid #ffeb3b;padding:5px 10px;border-radius:5px;display:inline-block;margin-top:5px; text-align:right; width: calc(100% - 22px);}
-        
-        /* Secciones de admin */
-        #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
-        .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em;text-shadow:1px 1px 2px rgba(0,0,0,.5);}
-        .icon-si{background-color:#28a745}
-        .icon-pendiente{background-color:#ffc107;color:#333}
-        .icon-no{background-color:#dc3545}
-        
-        /* Modo Test */
-        #admin-test-section button{padding:5px 10px;margin-left:5px;}
+    /* Iconos de estado */
+    #admin-lock, #player-login{cursor:pointer;font-size:1.5em}
+    #login-info{font-size:0.8em;color:#333;text-align:center;margin-top:10px;}
+    .highlight-login {background-color:#fffbdd;border:1px solid #ffeb3b;padding:5px 10px;border-radius:5px;display:inline-block;margin-top:5px; text-align:right;}
+    
+    /* Secciones de admin */
+    #refuerzos-section, #add-player-section{margin-top:25px;padding:15px;border:1px solid #eee;border-radius:8px;display:none}
+    .status-icon{display:inline-flex;justify-content:center;align-items:center;width:1.4em;height:1.4em;border-radius:50%;color:#fff;font-weight:700;margin-right:8px;border:2px solid black;font-size:.9em;text-shadow:1px 1px 2px rgba(0,0,0,.5);}
+    .icon-si{background-color:#28a745}
+    .icon-pendiente{background-color:#ffc107;color:#333}
+    .icon-no{background-color:#dc3545}
+    
+    /* Modo Test */
+    #admin-test-section button{padding:5px 10px;margin-left:5px;}
 
-        /* Ventanas Modales */
-        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
-        .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
-        .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;}
-        .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
-        .modal-buttons{display:flex;justify-content:center;gap:15px;}
-        .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
-        .modal-button.cancel{background-color:#6c757d;}
-        .modal-button:hover{opacity:0.85;}
-        
-        /* Estilos para el widget del tiempo */
-        #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
-        .weather-icon{font-size:1.5em;}
-        
-        /* --- ESTILOS MEJORAS --- */
-        #equipment-summary {text-align: center;padding: 8px;margin-bottom: 15px;background-color: #e9ecef;border-radius: 6px;font-size: 0.9em;line-height: 1.5;}
-        #equipment-summary span {margin: 0 10px;}
-        .equipment-question {margin-bottom: 15px;text-align: left;padding-left: 20%;}
-        .equipment-question p {margin-bottom: 5px;font-weight: 600;}
-        .equipment-question label {margin-right: 15px;}
-        .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
-        #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
-        #match-menu-icon.active {display:inline-block;}
-        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
-        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1001;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
-        #match-menu-dropdown:hover {background-color:#f1f1f1;}
-        .team-modal-container {display:flex;justify-content:space-around;text-align:left;}
-        .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
-        .team-column ul {list-style:none;padding:0;}
-        .team-column li {padding:4px 0;}
-        .team-verde h4 {border-color:#28a745;}
-        .team-naranja h4 {border-color:#ff9800;}
+    /* Ventanas Modales */
+    .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
+    .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
+    .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
+    .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;}
+    .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
+    .modal-buttons{display:flex;justify-content:center;gap:15px;}
+    .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
+    .modal-button.cancel{background-color:#6c757d;}
+    .modal-button:hover{opacity:0.85;}
+    
+    /* Estilos para el widget del tiempo */
+    #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
+    .weather-icon{font-size:1.5em;}
+    
+    /* --- ESTILOS MEJORAS --- */
+    #equipment-summary {text-align: center;padding: 8px;margin-bottom: 15px;background-color: #e9ecef;border-radius: 6px;font-size: 0.9em;line-height: 1.5;}
+    #equipment-summary span {margin: 0 10px;}
+    .equipment-question {margin-bottom: 15px;text-align: left;padding-left: 20%;}
+    .equipment-question p {margin-bottom: 5px;font-weight: 600;}
+    .equipment-question label {margin-right: 15px;}
+    .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
+    #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
+    #match-menu-icon.active {display:inline-block;}
+    .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
+    #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1001;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
+    #match-menu-dropdown:hover {background-color:#f1f1f1;}
+    .team-modal-container {display:flex;justify-content:space-around;text-align:left;}
+    .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
+    .team-column ul {list-style:none;padding:0;}
+    .team-column li {padding:4px 0;}
+    .team-verde h4 {border-color:#28a745;}
+    .team-naranja h4 {border-color:#ff9800;}
 
-        /* Estilos para móviles */
-        @media screen and (max-width:600px){
-            body{padding:5px}.container{padding:15px; padding-bottom: 80px;}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
-            table,thead,tbody,th,td,tr{display:block}
-            thead tr{position:absolute;top:-9999px;left:-9999px}
-            tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
-            td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
-            td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
-            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Bajas"}td:nth-of-type(4):before{content:"Fiabilidad"}td:nth-of-type(5):before{content:"Acción"}
-            .status-radio{justify-content:flex-end}input[type=number]{width:70px}
-            .admin-view .admin-only{display:block !important;}
-        }
+    /* Estilos para móviles */
+    @media screen and (max-width:600px){
+        body{padding:5px}.container{padding:15px; padding-bottom: 80px;}h1{font-size:1.5em}.probabilidad{font-size:2em}.recomendacion{font-size:1em}
+        table,thead,tbody,th,td,tr{display:block}
+        thead tr{position:absolute;top:-9999px;left:-9999px}
+        tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
+        td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
+        td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
+        td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Bajas"}td:nth-of-type(4):before{content:"Fiabilidad"}td:nth-of-type(5):before{content:"Acción"}
+        .status-radio{justify-content:flex-end}input[type=number]{width:70px}
+        .admin-view .admin-only{display:block !important;}
+    }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>
         <div class="login-controls">
