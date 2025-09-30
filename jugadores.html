@@ -222,7 +222,6 @@
         <button id="modal-button" class="modal-button">Aceptar</button>
     </div>
 </div>
-
 <div id="custom-confirm-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="confirm-title" class="modal-title"></h3>
@@ -233,7 +232,6 @@
         </div>
     </div>
 </div>
-
 <div id="custom-prompt-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="prompt-title" class="modal-title"></h3>
@@ -244,7 +242,6 @@
         </div>
     </div>
 </div>
-
 <div id="equipment-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 class="modal-title">Material para el partido</h3>
@@ -264,7 +261,6 @@
         </div>
     </div>
 </div>
-
 <div id="teams-modal" class="modal-overlay">
     <div class="modal-box">
         <h3 class="modal-title">Equipos del Partido</h3>
@@ -305,27 +301,27 @@ let weatherHasBeenFetched = false;
 
 // --- Sistema de Ventanas Modales ---
 function showCustomAlert(title, message, onOk) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').innerHTML = message.replace(/\n/g, '<br>');
-    const modal = document.getElementById('custom-alert-modal');
-    modal.style.display = 'flex';
-    document.getElementById('modal-button').onclick = () => {
-        modal.style.display = 'none';
+    const el = document.getElementById('custom-alert-modal');
+    el.querySelector('#modal-title').textContent = title;
+    el.querySelector('#modal-message').innerHTML = message.replace(/\n/g, '<br>');
+    el.style.display = 'flex';
+    el.querySelector('#modal-button').onclick = () => {
+        el.style.display = 'none';
         if (onOk) onOk(); 
     };
 }
 document.getElementById('custom-alert-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'custom-alert-modal') document.getElementById('custom-alert-modal').style.display = 'none';
+    if (e.target.id === 'custom-alert-modal') e.currentTarget.style.display = 'none';
 });
 
 function showCustomConfirm(title, message) {
     return new Promise(resolve => {
         const modal = document.getElementById('custom-confirm-modal');
-        document.getElementById('confirm-title').textContent = title;
-        document.getElementById('confirm-message').textContent = message;
+        modal.querySelector('#confirm-title').textContent = title;
+        modal.querySelector('#confirm-message').textContent = message;
         modal.style.display = 'flex';
-        const okBtn = document.getElementById('confirm-ok');
-        const cancelBtn = document.getElementById('confirm-cancel');
+        const okBtn = modal.querySelector('#confirm-ok');
+        const cancelBtn = modal.querySelector('#confirm-cancel');
         const close = (value) => {
             modal.style.display = 'none';
             okBtn.onclick = null;
@@ -340,13 +336,13 @@ function showCustomConfirm(title, message) {
 function showCustomPrompt(title) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-prompt-modal');
-        const input = document.getElementById('prompt-input');
-        document.getElementById('prompt-title').textContent = title;
+        const input = modal.querySelector('#prompt-input');
+        modal.querySelector('#prompt-title').textContent = title;
         input.value = '';
         modal.style.display = 'flex';
         input.focus();
-        const okBtn = document.getElementById('prompt-ok');
-        const cancelBtn = document.getElementById('prompt-cancel');
+        const okBtn = modal.querySelector('#prompt-ok');
+        const cancelBtn = modal.querySelector('#prompt-cancel');
         const close = (value) => {
             modal.style.display = 'none';
             okBtn.onclick = null; cancelBtn.onclick = null; input.onkeydown = null;
@@ -362,18 +358,18 @@ function showEquipmentModal() {
     return new Promise(resolve => {
         const modal = document.getElementById('equipment-modal');
         modal.style.display = 'flex';
-        document.querySelector('input[name="balon-radio"][value="no"]').checked = true;
-        document.querySelector('input[name="petos-radio"][value="no"]').checked = true;
-        const okBtn = document.getElementById('equipment-ok');
-        const cancelBtn = document.getElementById('equipment-cancel');
+        modal.querySelector('input[name="balon-radio"][value="no"]').checked = true;
+        modal.querySelector('input[name="petos-radio"][value="no"]').checked = true;
+        const okBtn = modal.querySelector('#equipment-ok');
+        const cancelBtn = modal.querySelector('#equipment-cancel');
         const close = (value) => {
             modal.style.display = 'none';
             okBtn.onclick = null; cancelBtn.onclick = null;
             resolve(value);
         };
         okBtn.onclick = () => {
-            const balon = document.querySelector('input[name="balon-radio"]:checked').value;
-            const petos = document.querySelector('input[name="petos-radio"]:checked').value;
+            const balon = modal.querySelector('input[name="balon-radio"]:checked').value;
+            const petos = modal.querySelector('input[name="petos-radio"]:checked').value;
             close({ balon, petos });
         };
         cancelBtn.onclick = () => close(null);
@@ -382,7 +378,7 @@ function showEquipmentModal() {
 
 function showTeamsModal() {
     const modal = document.getElementById('teams-modal');
-    const contentDiv = document.getElementById('teams-content');
+    const contentDiv = modal.querySelector('#teams-content');
     const jugadores = currentDbData.jugadores || {};
     
     const equipoVerde = [], equipoNaranja = [];
@@ -404,26 +400,27 @@ function showTeamsModal() {
         </div>
     `;
     modal.style.display = 'flex';
-    document.getElementById('teams-ok').onclick = () => modal.style.display = 'none';
+    modal.querySelector('#teams-ok').onclick = () => modal.style.display = 'none';
 }
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
+    const loginInfoDiv = document.getElementById('login-info');
     if (isAdmin) {
         isAdmin = false;
         loggedInPlayer = null;
-        document.getElementById('login-info').textContent = 'Identifícate para responder →';
-        document.getElementById('login-info').className = 'highlight-login';
+        loginInfoDiv.textContent = 'Identifícate para responder →';
+        loginInfoDiv.className = 'highlight-login';
         renderUI();
     } else {
         const pass = await showCustomPrompt('Contraseña de Administrador');
         if (pass === adminPassword) {
             isAdmin = true;
             loggedInPlayer = null;
-            document.getElementById('login-info').textContent = 'Sesión iniciada como Administrador';
-            document.getElementById('login-info').className = '';
+            loginInfoDiv.textContent = 'Sesión iniciada como Administrador';
+            loginInfoDiv.className = '';
         } else if (pass !== null) { 
             showCustomAlert('Error', 'Contraseña incorrecta.'); 
         }
@@ -437,11 +434,12 @@ document.getElementById('player-login-wrapper').addEventListener('click', async 
     if (!accessCode) return;
     const jugadores = currentDbData.jugadores;
     const playerKey = Object.keys(jugadores).find(key => jugadores[key].password === accessCode);
+    const loginInfoDiv = document.getElementById('login-info');
     if (playerKey) {
         loggedInPlayer = {...jugadores[playerKey], key: playerKey};
         isAdmin = false;
-        document.getElementById('login-info').textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
-        document.getElementById('login-info').className = '';
+        loginInfoDiv.textContent = `Sesión iniciada como: ${loggedInPlayer.nombre}`;
+        loginInfoDiv.className = '';
     } else {
         showCustomAlert('Error', 'Código de acceso no reconocido.');
     }
@@ -471,7 +469,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) {
             return false;
         }
-        const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const { jugadores, matchInfo } = currentDbData;
+        const refuerzos = currentDbData.refuerzos || {}; // Robustness fix
         const ahora = getCurrentTime();
         const matchDate = new Date(matchInfo.nextMatchDate);
         const wednesdayCutoff = new Date(matchDate);
@@ -479,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ahora < wednesdayCutoff) {
             return false;
         }
-        const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
+        const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length;
         return totalConfirmados >= 10;
     }
     
@@ -504,7 +503,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderSummary() {
-        const { jugadores, refuerzos, matchInfo, historial } = currentDbData;
+        const { jugadores, matchInfo, historial } = currentDbData;
+        const refuerzos = currentDbData.refuerzos || {}; // Robustness fix
+
         const equipmentDiv = document.getElementById('equipment-summary');
         const ballBringers = [];
         let bibsBringer = null;
@@ -525,9 +526,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
 
         const listaSi = [], listaPendiente = [], listaNo = [];
-        const jugadoresObj = jugadores || {};
-        Object.keys(jugadoresObj).forEach(key => {
-            const j = {...jugadoresObj[key], key: key};
+        Object.keys(jugadores).forEach(key => {
+            const j = {...jugadores[key], key: key};
             if (j.status === 'si') listaSi.push(j);
             else if (j.status === 'no') listaNo.push(j);
             else listaPendiente.push(j);
@@ -538,8 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
         listaPendiente.sort(sortByName);
         listaNo.sort(sortByName);
 
-        const listaRefuerzos = refuerzos ? Object.entries(refuerzos) : [];
-        const totalConfirmados = listaSi.length + listaRefuerzos.length;
+        const totalConfirmados = listaSi.length + Object.keys(refuerzos).length;
 
         const menuIcon = document.getElementById('match-menu-icon');
         const notificationDot = menuIcon.querySelector('.notification-dot');
@@ -592,7 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('refuerzos-section').style.display = isRefuerzosOpen && (loggedInPlayer || isAdmin) ? 'block' : 'none';
 
         const siHtml = listaSi.map(j => `<li><span class="status-icon icon-si">✔</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
-        const refuerzosHtml = listaRefuerzos.map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i></li>`).join('');
+        const refuerzosHtml = Object.values(refuerzos).map(ref => `<li><span class="status-icon icon-si">✔</span> <i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i></li>`).join('');
         const pendienteHtml = listaPendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const noHtml = listaNo.map(j => `<li><span class="status-icon icon-no">✖</span> <span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         
