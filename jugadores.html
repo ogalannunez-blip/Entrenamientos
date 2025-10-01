@@ -29,7 +29,8 @@
         
         /* Entradas y botones */
         input[type=number]{width:60px;padding:5px;border:1px solid #ccc;border-radius:4px;text-align:center}
-        input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%}
+        input[type=text]{padding:8px;border:1px solid #ccc;border-radius:4px;width:60%; height: 35px; box-sizing: border-box; vertical-align: middle;}
+        #refuerzos-section button, #add-player-section button { height: 35px; box-sizing: border-box; vertical-align: middle; cursor: pointer;}
         .status-radio{display:flex;gap:10px;justify-content:flex-start}
         .admin-button{width:calc(100% - 20px);padding:10px;margin:0 10px 15px 10px;background-color:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;}
         .admin-button:hover{opacity:0.9;}
@@ -102,10 +103,12 @@
         .equipment-question p {margin-bottom: 5px;font-weight: 600;}
         .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
         #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
+        #match-menu-icon.active {display:inline-block;}
         .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
-        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);padding:12px 16px;z-index:1001;border-radius:5px;cursor:pointer; left: 5px; top: 30px;}
-        #match-menu-dropdown:hover {background-color:#f1f1f1;}
-        .notification-dot-text { font-size: 0.5em; vertical-align: top; color:red; display:none;}
+        #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);z-index:1001;border-radius:5px; left: 5px; top: 30px; width: 100px; text-align: left;}
+        .menu-option { padding: 8px 12px; cursor: pointer; font-size: 0.9em; }
+        .menu-option:hover { background-color:#f1f1f1; }
+        .notification-dot-text { font-size: 0.6em; vertical-align: middle; color:red; display:none; margin-right: 4px;}
         .team-modal-container {display:flex;justify-content:space-around;text-align:center;}
         .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
         .team-column ul {list-style:none;padding:0;}
@@ -137,7 +140,12 @@
     </h1>
 
     <div class="login-info-container">
-        <div id="match-menu-icon">&#9776;<span class="notification-dot"></span><div id="match-menu-dropdown">Equipos <span class="notification-dot-text">&#11044;</span></div></div>
+        <div id="match-menu-icon">&#9776;<span class="notification-dot"></span>
+            <div id="match-menu-dropdown">
+                <div class="menu-option" id="menu-option-equipos"><span class="notification-dot-text">🔴</span>Equipos</div>
+                <div class="menu-option" id="menu-option-finanzas">Finanzas</div>
+            </div>
+        </div>
         <div id="login-info" class="highlight-login">Identifícate para responder →</div>
     </div>
     
@@ -285,12 +293,20 @@ function showTeamsModal() {
     const modal = document.getElementById('teams-modal');
     const contentDiv = modal.querySelector('#teams-content');
     const jugadores = currentDbData.jugadores || {};
+    const refuerzos = currentDbData.refuerzos || {};
     const equipoVerde = [], equipoNaranja = [];
+    
     Object.values(jugadores).sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(j => {
         if (j.status === 'si' && j.equipo) {
             (j.equipo === 'verde' ? equipoVerde : equipoNaranja).push(j.nombre);
         }
     });
+    Object.values(refuerzos).forEach(r => {
+        if (r.equipo) {
+            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`${r.nombre} (R)`);
+        }
+    });
+
     contentDiv.innerHTML = `<div class="team-column team-verde"><h4>&#128994; Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>&#128992; Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
     modal.style.display = 'flex';
     modal.querySelector('#teams-ok').onclick = () => modal.style.display = 'none';
@@ -443,10 +459,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const totalConfirmados = si.length + Object.keys(refuerzos).length;
 
-        const menuIcon = document.getElementById('match-menu-icon');
-        const dotIcon = menuIcon.querySelector('.notification-dot');
-        const dotText = document.getElementById('match-menu-dropdown').querySelector('.notification-dot-text');
-
+        const dotIcon = document.querySelector('#match-menu-icon .notification-dot');
+        const dotText = document.querySelector('#match-menu-dropdown .notification-dot-text');
         if (totalConfirmados >= 10) {
             dotIcon.style.display = 'block';
             dotText.style.display = 'inline';
@@ -503,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const attended = last4.filter(k => historial[k]?.jugadores?.[key]?.status === 'si').length;
             const fiabilidad = last4.length > 0 ? `${(attended / last4.length * 100).toFixed(0)}%` : 'N/A';
             const status = j.status || 'pendiente';
-            tablaBody.innerHTML += `<tr data-key="${key}"><td>${j.nombre}</td><td><div class="status-radio"><label><input type="radio" name="status-${key}" value="si" ${status==='si'?'checked':''}> Sí</label><label><input type="radio" name="status-${key}" value="no" ${status==='no'?'checked':''}> No</label><label><input type="radio" name="status-${key}" value="pendiente" ${status==='pendiente'?'checked':''}> Pdte</label></div></td><td class="admin-only"><input type="number" class="bajas" value="${j.bajas||0}" min="0"></td><td class="fiabilidad">${fiabilidad}</td><td class="admin-only"><button class="delete-player-btn" title="Eliminar">🗑️</button></td></tr>`;
+            tablaBody.innerHTML += `<tr data-key="${key}"><td>${j.nombre}</td><td><div class="status-radio"><label><input type="radio" name="status-${key}" value="si" ${status==='si'?'checked':''}> Sí</label><label><input type="radio" name="status-${key}" value="no" ${status==='no'?'checked':''}> No</label><label><input type="radio" name="status-${key}" value="pendiente" ${status==='pendiente'?'checked':''}> Pendiente</label></div></td><td class="admin-only"><input type="number" class="bajas" value="${j.bajas||0}" min="0"></td><td class="fiabilidad">${fiabilidad}</td><td class="admin-only"><button class="delete-player-btn" title="Eliminar">🗑️</button></td></tr>`;
         });
     }
 
@@ -524,7 +538,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const isOpen = currentDbData.matchInfo?.refuerzosAbiertos;
             toggleBtn.textContent = isOpen ? 'Desactivar Añadir Amigos (Manual)' : 'Activar Añadir Amigos (Manual)';
             toggleBtn.style.backgroundColor = isOpen ? '#dc3545' : '#28a745';
+        } else {
+             document.getElementById('archive-button').style.display = 'none';
+             document.getElementById('reset-button').style.display = 'none';
+             document.getElementById('toggle-refuerzos-button').style.display = 'none';
         }
+
         document.querySelectorAll('#tabla-jugadores tbody tr').forEach(fila => {
             const isPlayerRow = loggedInPlayer && loggedInPlayer.key === fila.dataset.key;
             if (loggedInPlayer && !isAdmin) {
@@ -648,6 +667,36 @@ document.addEventListener('DOMContentLoaded', function() {
             database.ref().update(updates);
         }
     });
+    
+    document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
+        const nombre = document.getElementById('refuerzo-nombre').value.trim();
+        if(!nombre) return;
+        if(isAdmin || loggedInPlayer) {
+            const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
+            const newRefKey = database.ref('refuerzos').push().key;
+            const updates = {};
+            updates[`/refuerzos/${newRefKey}`] = { nombre, anadidoPor, key: newRefKey, timestamp: serverTimestamp };
+            
+            const jugadores = currentDbData.jugadores || {};
+            const refuerzos = currentDbData.refuerzos || {};
+            const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length + 1;
+            
+            if(totalConfirmados >= 10) {
+                const equipos = { verde: 0, naranja: 0 };
+                Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo]++; });
+                Object.values(refuerzos).forEach(r => { if (r.equipo) equipos[r.equipo]++; });
+                if (equipos.verde === equipos.naranja) {
+                    updates[`/refuerzos/${newRefKey}/equipo`] = Math.random() < 0.5 ? 'verde' : 'naranja';
+                } else {
+                    updates[`/refuerzos/${newRefKey}/equipo`] = equipos.verde < equipos.naranja ? 'verde' : 'naranja';
+                }
+            }
+            database.ref().update(updates);
+            document.getElementById('refuerzo-nombre').value = '';
+        } else {
+            showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo.");
+        }
+    });
 
     document.getElementById('match-menu-icon').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -665,16 +714,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    document.getElementById('match-menu-dropdown').addEventListener('click', async (e) => {
+    document.getElementById('menu-option-equipos').addEventListener('click', async (e) => {
         e.stopPropagation();
         document.getElementById('match-menu-dropdown').style.display = 'none';
         const totalConfirmados = Object.values(currentDbData.jugadores).filter(j => j.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
-
         if (totalConfirmados < 10) {
             showCustomAlert('Aviso', 'No hay suficientes jugadores para formar equipos.');
         } else {
             showTeamsModal();
         }
+    });
+    
+    document.getElementById('menu-option-finanzas').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('match-menu-dropdown').style.display = 'none';
+        showCustomAlert('Finanzas', 'No disponible.');
     });
 
     document.getElementById('apply-test-date').addEventListener('click', () => { simulatedTime = document.getElementById('test-date').value ? new Date(document.getElementById('test-date').value) : null; renderUI(); });
@@ -714,22 +768,17 @@ document.addEventListener('DOMContentLoaded', function() {
             updates[`/jugadores/${k}/equipo`] = null;
             updates[`/jugadores/${k}/confirmTimestamp`] = null;
         });
+        database.ref('/refuerzos').set(null); // Borrar también refuerzos al resetear
         database.ref().update(updates);
     });
     document.getElementById('toggle-refuerzos-button').addEventListener('click', () => { if(isAdmin) database.ref('matchInfo/refuerzosAbiertos').set(!currentDbData.matchInfo?.refuerzosAbiertos); });
-    document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
-        const nombre = document.getElementById('refuerzo-nombre').value.trim();
-        if(nombre && (isAdmin || loggedInPlayer)) {
-            database.ref('refuerzos').push({ nombre, anadidoPor: isAdmin ? 'Admin' : loggedInPlayer.nombre });
-            document.getElementById('refuerzo-nombre').value = '';
-        }
-    });
     document.getElementById('add-player-btn').addEventListener('click', async () => {
         const newName = document.getElementById('new-player-name').value.trim();
         if (!newName) return;
         const newPass = await showCustomPrompt(`Contraseña para ${newName}`);
         if (!newPass) return;
         database.ref('jugadores').push({ nombre: newName, password: newPass, status: "pendiente", bajas: 0 });
+        document.getElementById('new-player-name').value = '';
     });
     document.body.addEventListener('click', e => {
         if (e.target.closest('.delete-refuerzo')) {
