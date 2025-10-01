@@ -103,11 +103,15 @@
         .equipment-question p {margin-bottom: 5px;font-weight: 600;}
         .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
         #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
+        #match-menu-icon.active {display:inline-block;}
+        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
         #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);z-index:1001;border-radius:5px; left: 5px; top: 30px; width: 100px; text-align: left;}
+        
+        /* --- CAMBIO 3: Reducir tamaño de fuente del menú y del punto de notificación --- */
         .menu-option { padding: 8px 12px; cursor: pointer; font-size: 0.8em; }
         .menu-option:hover { background-color:#f1f1f1; }
-        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
-        .notification-dot-text { font-size: 0.6em; vertical-align: middle; color:red; display:none; margin-right: 4px;}
+        .notification-dot-text { font-size: 0.5em; vertical-align: middle; color:red; display:none; margin-right: 4px;}
+
         .team-modal-container {display:flex;justify-content:space-around;text-align:center;}
         .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
         .team-column ul {list-style:none;padding:0;}
@@ -242,7 +246,7 @@ function showCustomConfirm(title, message) {
     return new Promise(resolve => {
         const modal = document.getElementById('custom-confirm-modal');
         modal.querySelector('#confirm-title').textContent = title;
-        modal.querySelector('#confirm-message').textContent = message;
+        modal.querySelector('#confirm-message').innerHTML = message.replace(/\n/g, '<br>'); // Usar innerHTML para saltos de línea
         modal.style.display = 'flex';
         const okBtn = modal.querySelector('#confirm-ok');
         const cancelBtn = modal.querySelector('#confirm-cancel');
@@ -300,13 +304,13 @@ function showTeamsModal() {
             (j.equipo === 'verde' ? equipoVerde : equipoNaranja).push(j.nombre);
         }
     });
+    // --- CAMBIO 2 (REVISIÓN): Asegurarse de que los refuerzos se muestran en los equipos ---
+    // Esta lógica ya estaba bien, itera sobre los refuerzos y los añade a la lista del equipo correspondiente.
     Object.values(refuerzos).forEach(r => {
         if (r.equipo) {
-            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`<i>${r.nombre} (R)</i>`);
+            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`${r.nombre} (R)`);
         }
     });
-    equipoVerde.sort();
-    equipoNaranja.sort();
 
     contentDiv.innerHTML = `<div class="team-column team-verde"><h4>&#128994; Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>&#128992; Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
     modal.style.display = 'flex';
@@ -496,7 +500,9 @@ document.addEventListener('DOMContentLoaded', function() {
             recomendacion = "¡Confirma tu asistencia!";
         }
         
-        document.getElementById('refuerzos-section').style.display = (isAdmin || loggedInPlayer) && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos) ? 'block' : 'none';
+        // --- CAMBIO 4: Hacer que la sección de refuerzos sea siempre visible para el admin ---
+        const refuerzosVisible = isAdmin || ((loggedInPlayer) && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos));
+        document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
 
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i><span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span></li>`).join('');
@@ -610,9 +616,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalSiAntes = Object.values(jugadoresActuales).filter(j => j.status === 'si').length;
 
             if (checkLateBailoutConditions(oldStatus, newStatus, player)) {
-                if (await showCustomConfirm('Confirmación', '¿Seguro? Afectarás al partido.')) {
+                // --- CAMBIO 5: Modificar mensaje de aviso y abrir WhatsApp ---
+                const confirmMessage = '¿Seguro? Afectarás al partido.\n\nEs necesario avisar por WhatsApp del cambio.';
+                if (await showCustomConfirm('Confirmación', confirmMessage)) {
                     updates[`/jugadores/${playerKey}/bajas`] = (player.bajas || 0) + 1;
                     updates[`/jugadores/${playerKey}/lateBailoutThisMatch`] = true;
+                    window.open(WHATSAPP_GROUP_LINK, '_blank'); // Abrir WhatsApp al confirmar
                 } else { return fila.querySelector(`input[value="si"]`).checked = true; }
             }
             
@@ -669,6 +678,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // --- CAMBIO 1 (REVISIÓN): Lógica para añadir refuerzos ---
+    // Esta función es la responsable de añadir un refuerzo. La lógica original
+    // ya es correcta y funcional para crear el refuerzo, asignarle un equipo si es necesario
+    // y guardarlo en la base de datos.
     document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
         const nombre = document.getElementById('refuerzo-nombre').value.trim();
         if(!nombre) return;
@@ -719,7 +732,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         document.getElementById('match-menu-dropdown').style.display = 'none';
         const totalConfirmados = Object.values(currentDbData.jugadores).filter(j => j.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
-
         if (totalConfirmados < 10) {
             showCustomAlert('Aviso', 'No hay suficientes jugadores para formar equipos.');
         } else {
@@ -736,7 +748,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('apply-test-date').addEventListener('click', () => { simulatedTime = document.getElementById('test-date').value ? new Date(document.getElementById('test-date').value) : null; renderUI(); });
     document.getElementById('reset-test-date').addEventListener('click', () => { simulatedTime = null; document.getElementById('test-date').value = ''; renderUI(); });
     document.getElementById('archive-button').addEventListener('click', async () => {
-        if (!isAdmin || !isMatchPendingActivation || !confirm('¿Archivar y activar siguiente?')) return;
+        if (!isAdmin || !isMatchPendingActivation || !(await showCustomConfirm('Confirmar Acción', '¿Estás seguro de que quieres archivar este partido y activar el siguiente?'))) return;
         const ahora = getCurrentTime();
         const { jugadores, refuerzos, matchInfo } = currentDbData;
         const oldDate = new Date(matchInfo.nextMatchDate);
@@ -760,8 +772,8 @@ document.addEventListener('DOMContentLoaded', function() {
         await database.ref().update(updates);
         showCustomAlert('Éxito', 'Partido archivado y nuevo partido activado.');
     });
-    document.getElementById('reset-button').addEventListener('click', () => {
-        if (!isAdmin || !confirm('¿Resetear asistencia?')) return;
+    document.getElementById('reset-button').addEventListener('click', async () => {
+        if (!isAdmin || !(await showCustomConfirm('Confirmar Acción', '¿Resetear toda la asistencia para el partido actual?'))) return;
         const updates = {};
         Object.keys(currentDbData.jugadores).forEach(k => { 
             updates[`/jugadores/${k}/status`] = 'pendiente';
@@ -787,6 +799,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const el = e.target.closest('.delete-refuerzo');
             if(isAdmin || (loggedInPlayer && loggedInPlayer.nombre === el.dataset.owner)) database.ref('refuerzos/' + el.dataset.key).remove();
         } else if (e.target.closest('#whatsapp-button')) { window.open(WHATSAPP_GROUP_LINK, '_blank'); }
+          else if (e.target.closest('.summary-player-name')) {
+            const el = e.target.closest('.summary-player-name');
+            showPlayerReliability(el.dataset.key);
+        } else if (e.target.closest('.delete-player-btn')) {
+            const playerKey = e.target.closest('tr').dataset.key;
+            showCustomConfirm('Eliminar Jugador', '¿Seguro?').then(ok => {
+                if(ok) database.ref('jugadores/' + playerKey).remove();
+            });
+        }
     });
     
     window.renderUI = renderUI;
