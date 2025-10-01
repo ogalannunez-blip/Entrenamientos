@@ -671,46 +671,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    document.getElementById('add-refuerzo-btn').addEventListener('click', function () {
-    const nombre = document.getElementById('refuerzo-nombre').value.trim();
-    if (!nombre) return;
-    if (!isAdmin && !loggedInPlayer) return showCustomAlert('Aviso', 'Debes identificarte para añadir un refuerzo.');
-
-    const anadidoPor = isAdmin ? "Admin" : loggedInPlayer.nombre;
-    const newRefuerzoRef = database.ref('refuerzos').push();
-    const newRefuerzoData = {
-        nombre,
-        anadidoPor,
-        key: newRefuerzoRef.key,
-        timestamp: serverTimestamp
-    };
-
-    newRefuerzoRef.set(newRefuerzoData).then(function () {
-        // Actualizar localmente el estado y la UI inmediatamente tras el alta en Firebase
-        if (!currentDbData.refuerzos) currentDbData.refuerzos = {};
-        currentDbData.refuerzos[newRefuerzoRef.key] = {...newRefuerzoData, timestamp: Date.now()};
-        document.getElementById('refuerzo-nombre').value = "";
-
-        // Lógica de asignación a equipos SOLO si ya hay 10 confirmados
-        const jugadores = currentDbData.jugadores;
-        const refuerzos = currentDbData.refuerzos;
-        const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length;
-        if (totalConfirmados === 10) {
-            const equipos = {verde: 0, naranja: 0};
-            Object.values(jugadores).forEach(j => {
-                if (j.status === 'si' && j.equipo) equipos[j.equipo]++;
-            });
-            Object.values(refuerzos).forEach(r => {
-                if (r.equipo) equipos[r.equipo]++;
-            });
-            let equipoAsignado = (equipos.verde <= equipos.naranja) ? 'verde' : 'naranja';
-            newRefuerzoRef.update({equipo: equipoAsignado});
-            currentDbData.refuerzos[newRefuerzoRef.key].equipo = equipoAsignado;
+    document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
+        const nombre = document.getElementById('refuerzo-nombre').value.trim();
+        if(!nombre) return;
+        if(!isAdmin && !loggedInPlayer) {
+            return showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo.");
         }
+        
+        const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
+        const newRefuerzoRef = database.ref('refuerzos').push();
+        const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoRef.key, timestamp: serverTimestamp };
 
-        renderUI();
+        newRefuerzoRef.set(newRefuerzoData).then(() => {
+            const jugadores = currentDbData.jugadores || {};
+            const refuerzos = { ...currentDbData.refuerzos, [newRefuerzoRef.key]: newRefuerzoData };
+            const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length;
+
+            if(totalConfirmados >= 10) {
+                const equipos = { verde: 0, naranja: 0 };
+                Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo]++; });
+                Object.values(refuerzos).forEach(r => { if (r.equipo) equipos[r.equipo]++; });
+                
+                let equipoAsignado;
+                if (equipos.verde <= equipos.naranja) {
+                    equipoAsignado = 'verde';
+                } else {
+                    equipoAsignado = 'naranja';
+                }
+                newRefuerzoRef.update({ equipo: equipoAsignado });
+            }
+        });
+        
+        document.getElementById('refuerzo-nombre').value = '';
     });
-});
 
     document.getElementById('match-menu-icon').addEventListener('click', (e) => {
         e.stopPropagation();
