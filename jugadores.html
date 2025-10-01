@@ -103,11 +103,10 @@
         .equipment-question p {margin-bottom: 5px;font-weight: 600;}
         .login-info-container {display:flex;align-items:center;justify-content:center;gap:10px; position: relative;}
         #match-menu-icon {cursor:pointer;font-size:1.5em;position:relative;display:none;}
-        #match-menu-icon.active {display:inline-block;}
-        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
         #match-menu-dropdown {display:none;position:absolute;background-color:#fff;box-shadow:0 8px 16px rgba(0,0,0,0.2);z-index:1001;border-radius:5px; left: 5px; top: 30px; width: 100px; text-align: left;}
-        .menu-option { padding: 8px 12px; cursor: pointer; font-size: 0.9em; }
+        .menu-option { padding: 8px 12px; cursor: pointer; font-size: 0.8em; }
         .menu-option:hover { background-color:#f1f1f1; }
+        .notification-dot {width:8px;height:8px;background-color:red;border-radius:50%;position:absolute;top:0;right:0;display:none;}
         .notification-dot-text { font-size: 0.6em; vertical-align: middle; color:red; display:none; margin-right: 4px;}
         .team-modal-container {display:flex;justify-content:space-around;text-align:center;}
         .team-column h4 {font-size:1.2em;color:#333;border-bottom:2px solid;padding-bottom:5px;}
@@ -303,9 +302,11 @@ function showTeamsModal() {
     });
     Object.values(refuerzos).forEach(r => {
         if (r.equipo) {
-            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`${r.nombre} (R)`);
+            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`<i>${r.nombre} (R)</i>`);
         }
     });
+    equipoVerde.sort();
+    equipoNaranja.sort();
 
     contentDiv.innerHTML = `<div class="team-column team-verde"><h4>&#128994; Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>&#128992; Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
     modal.style.display = 'flex';
@@ -718,6 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         document.getElementById('match-menu-dropdown').style.display = 'none';
         const totalConfirmados = Object.values(currentDbData.jugadores).filter(j => j.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
+
         if (totalConfirmados < 10) {
             showCustomAlert('Aviso', 'No hay suficientes jugadores para formar equipos.');
         } else {
