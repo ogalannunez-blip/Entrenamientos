@@ -94,6 +94,7 @@
         
         /* Estilos para el widget del tiempo */
         #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
+        .weather-icon{font-size:1.5em;}
         
         /* --- ESTILOS MEJORAS --- */
         #equipment-summary {text-align: center;padding: 8px;margin-bottom: 15px;background-color: #e9ecef;border-radius: 6px;font-size: 0.9em;line-height: 1.5;}
@@ -171,7 +172,7 @@
         <div id="weather-forecast">Cargando previsión del tiempo...</div>
         
         <div id="google-maps-link" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
-          <a href="https://maps.app.goo.gl/ZzbkoFyTCXzEyMB68" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
+          <a href="http://googleusercontent.com/maps/google.com/0" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
         </div>
         
         <div id="refuerzos-section" style="display:none;">
@@ -502,7 +503,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const dotIcon = document.querySelector('#match-menu-icon .notification-dot');
         const dotText = document.querySelector('#match-menu-dropdown .notification-dot-text');
         
-        // --- MODIFICADO --- El punto rojo no aparece si el partido está pendiente de activar
         if (totalConfirmados >= 10 && !isMatchPendingActivation) {
             dotIcon.style.display = 'block';
             dotText.style.display = 'inline';
@@ -533,11 +533,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             probabilidad = Math.min((si.length * 10) + probabilidad, 98);
             claseColor = probabilidad >= 70 ? "ambar" : "rojo";
-            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}%</p>`;
+            // --- AÑADIDO --- Lógica para mostrar el icono de información que pediste
+            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.5em; font-weight: 400; display: block; margin-top: 5px;">Probabilidad de Jugar <span id="probabilidad-info-icon" style="cursor:pointer; font-size: 1.2em;">ℹ️</span></span></p>`;
             recomendacion = "¡Confirma tu asistencia!";
         }
         
-        // --- MODIFICADO --- La sección de refuerzos no se muestra si el partido está pendiente de activar para no-admins
         const refuerzosVisible = (isAdmin || (loggedInPlayer && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos))) && !isMatchPendingActivation;
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
 
@@ -564,7 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const fiabilidad = last4.length > 0 ? `${(attended / last4.length * 100).toFixed(0)}%` : 'N/A';
             const status = j.status || 'pendiente';
             
-            // --- MODIFICADO --- Se añade la celda de equipo
             let equipoHtml = '-';
             if(isAdmin && j.status === 'si' && j.equipo && totalConfirmados >= 10) {
                  equipoHtml = `<span class="team-switch-btn ${j.equipo}" data-key="${key}">${j.equipo.charAt(0).toUpperCase()}</span>`;
@@ -584,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('admin-test-section').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('match-menu-icon').style.display = isLoggedIn ? 'inline-block' : 'none';
 
-        // --- AÑADIDO --- Ocultar elementos para no-admins si el partido está pendiente
         if(isMatchPendingActivation && !isAdmin){
             document.getElementById('equipment-summary').style.display = 'none';
             document.getElementById('weather-forecast').style.display = 'none';
@@ -594,7 +592,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('weather-forecast').style.display = 'flex';
             document.getElementById('google-maps-link').style.display = 'block';
         }
-
 
         if (isAdmin) {
             const timeDisplay = document.getElementById('current-time-display');
@@ -640,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
         activationTimeLimit.setHours(22, 0, 0, 0);
         isMatchPendingActivation = ahora > activationTimeLimit;
         
-        if (isMatchPendingActivation) { // --- MODIFICADO --- La condición ahora afecta a todos
+        if (isMatchPendingActivation) {
             document.getElementById('pending-activation').style.display = 'block';
             document.getElementById('resultado').style.display = 'none';
             document.getElementById('tabla-jugadores').style.display = isAdmin ? '' : 'none';
@@ -653,9 +650,8 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    // --- NUEVO --- Función para equilibrar equipos por victorias
     function balanceTeamsByVictory(updates, jugadores) {
-        if (currentDbData.matchInfo?.manualTeamOverride) return updates; // No hacer nada si el admin cambió algo
+        if (currentDbData.matchInfo?.manualTeamOverride) return updates;
         
         const confirmedPlayers = Object.keys(jugadores).filter(k => (updates[`/jugadores/${k}/status`] || jugadores[k].status) === 'si');
         if (confirmedPlayers.length < 10) return updates;
@@ -668,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
             else if(playerTeam === 'naranja') equipoNaranja.push(playerData);
         });
         
-        if (equipoVerde.length !== equipoNaranja.length) return updates; // Solo balancear si los equipos están parejos
+        if (equipoVerde.length !== equipoNaranja.length) return updates;
         
         equipoVerde.sort((a,b) => b.victorias - a.victorias);
         equipoNaranja.sort((a,b) => b.victorias - a.victorias);
@@ -681,11 +677,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (Math.abs(verdeWins - naranjaWins) > 1) {
             const [strongerTeam, weakerTeam, newTeamName] = verdeWins > naranjaWins ? [equipoVerde, equipoNaranja, 'naranja'] : [equipoNaranja, equipoVerde, 'verde'];
-            const playerToMove = strongerTeam[0]; // Mover al que tiene más victorias del equipo fuerte
+            const playerToMove = strongerTeam[0];
             const randomTargetIndex = Math.floor(Math.random() * weakerTeam.length);
             const playerToReceive = weakerTeam[randomTargetIndex];
             
-            // Realizar el intercambio en el objeto updates
             updates[`/jugadores/${playerToMove.key}/equipo`] = newTeamName;
             updates[`/jugadores/${playerToReceive.key}/equipo`] = newTeamName === 'verde' ? 'naranja' : 'verde';
         }
@@ -743,21 +738,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         updates[`/jugadores/${key}/equipo`] = i < 5 ? 'verde' : 'naranja';
                     });
                 } else if (totalSiDespues > 10) {
-                    // --- MODIFICADO --- La regla de compensación prima sobre guardar el equipo
                     const equipos = { verde: 0, naranja: 0 };
                     Object.values(jugadoresActuales).forEach(j => {
                         if (j.status === 'si' && j.equipo) equipos[j.equipo]++;
                     });
                     updates[`/jugadores/${playerKey}/equipo`] = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
                 }
-                 // --- AÑADIDO --- Llamar a la función de balanceo
                  updates = balanceTeamsByVictory(updates, jugadoresActuales);
             }
             
             if (oldStatus === 'si' && newStatus !== 'si') {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = null;
-                updates[`/jugadores/${playerKey}/equipo`] = null; // Quitarlo del equipo
+                updates[`/jugadores/${playerKey}/equipo`] = null;
             }
 
             updates[`/jugadores/${playerKey}/status`] = newStatus;
@@ -815,7 +808,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         document.getElementById('match-menu-dropdown').style.display = 'none';
         
-        // --- MODIFICADO --- Comprobar si el partido está pendiente
         if(isMatchPendingActivation) {
             return showCustomAlert('Aviso', 'Partido pendiente de activarse.');
         }
@@ -837,12 +829,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('apply-test-date').addEventListener('click', () => { simulatedTime = document.getElementById('test-date').value ? new Date(document.getElementById('test-date').value) : null; renderUI(); });
     document.getElementById('reset-test-date').addEventListener('click', () => { simulatedTime = null; document.getElementById('test-date').value = ''; renderUI(); });
     
-    // --- MODIFICADO --- Lógica del botón de archivar
     document.getElementById('archive-button').addEventListener('click', async () => {
         if (!isAdmin || !isMatchPendingActivation) return;
         
         const winner = await showVictoryModal();
-        if (!winner) return; // Si el admin cancela, no hacer nada
+        if (!winner) return;
 
         const ahora = getCurrentTime();
         const { jugadores, refuerzos, matchInfo } = currentDbData;
@@ -862,7 +853,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updates[`/jugadores/${k}/equipo`] = null;
             updates[`/jugadores/${k}/confirmTimestamp`] = null;
 
-            // --- AÑADIDO --- Sumar victoria
             if(player.status === 'si' && player.equipo === winner){
                 updates[`/jugadores/${k}/victorias`] = (player.victorias || 0) + 1;
             }
@@ -873,12 +863,12 @@ document.addEventListener('DOMContentLoaded', function() {
             refuerzos:refuerzos||null, 
             cancelado:total<10, 
             con_extras:total>=10&&si.length<10,
-            ganador: winner // --- AÑADIDO ---
+            ganador: winner
         };
         updates['/refuerzos'] = null;
         updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
         updates['/matchInfo/refuerzosAbiertos'] = null;
-        updates['/matchInfo/manualTeamOverride'] = null; // --- AÑADIDO --- Resetear el override manual
+        updates['/matchInfo/manualTeamOverride'] = null;
         
         await database.ref().update(updates);
         showCustomAlert('Éxito', 'Partido archivado y nuevo partido activado.');
@@ -907,6 +897,8 @@ document.addEventListener('DOMContentLoaded', function() {
         database.ref('jugadores').push({ nombre: newName, password: newPass, status: "pendiente", bajas: 0, victorias: 0 });
         document.getElementById('new-player-name').value = '';
     });
+
+    // --- MODIFICADO --- Se agrupan todos los listeners del body
     document.body.addEventListener('click', async e => {
         if (e.target.closest('.delete-refuerzo')) {
             const el = e.target.closest('.delete-refuerzo');
@@ -915,7 +907,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     database.ref('refuerzos/' + el.dataset.key).remove();
                 }
             }
-        } else if (e.target.closest('#whatsapp-button')) { window.open(WHATSAPP_GROUP_LINK, '_blank'); 
+        } else if (e.target.closest('#whatsapp-button')) { 
+            window.open(WHATSAPP_GROUP_LINK, '_blank'); 
         } else if (e.target.closest('.summary-player-name')) {
             const el = e.target.closest('.summary-player-name');
             showPlayerReliability(el.dataset.key);
@@ -924,7 +917,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if(await showCustomConfirm('Eliminar Jugador', '¿Seguro? Esta acción es permanente.')) {
                 database.ref('jugadores/' + playerKey).remove();
             }
-        } else if (e.target.closest('.team-switch-btn')) { // --- AÑADIDO --- Listener para cambio de equipo
+        } else if (e.target.closest('.team-switch-btn')) {
             if(!isAdmin) return;
             const el = e.target.closest('.team-switch-btn');
             const playerKey = el.dataset.key;
@@ -933,8 +926,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const updates = {};
             updates[`/jugadores/${playerKey}/equipo`] = newTeam;
             updates['/matchInfo/manualTeamOverride'] = true;
-            database.ref().update(updates);
+            await database.ref().update(updates);
             showCustomAlert('Cambio Manual', `Equipos desbalanceados manualmente.\nEl balanceo automático por victorias queda desactivado para este partido.`);
+        }
+        // --- AÑADIDO --- Listener para el nuevo icono de información de probabilidad
+        else if (e.target.id === 'probabilidad-info-icon') {
+            const message = 'Esta probabilidad se calcula sumando:\n\n' +
+                          '• 10% por cada jugador confirmado.\n' +
+                          '• Un % adicional por cada jugador pendiente, basado en su fiabilidad de asistencia en los últimos 4 partidos.\n\n' +
+                          'Para ver las estadísticas detalladas de un jugador, pulsa sobre su nombre en la lista.';
+            showCustomAlert('Cálculo de Probabilidad', message);
         }
     });
     
