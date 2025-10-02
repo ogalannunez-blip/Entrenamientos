@@ -94,7 +94,6 @@
         
         /* Estilos para el widget del tiempo */
         #weather-forecast{font-size:0.9em;color:#555;text-align:center;padding:10px;border:1px solid #eee;border-radius:8px;margin-top:15px;display:flex;justify-content:center;align-items:center;gap:15px;}
-        .weather-icon{font-size:1.5em;}
         
         /* --- ESTILOS MEJORAS --- */
         #equipment-summary {text-align: center;padding: 8px;margin-bottom: 15px;background-color: #e9ecef;border-radius: 6px;font-size: 0.9em;line-height: 1.5;}
@@ -117,6 +116,10 @@
         .team-column li {padding:4px 0;}
         .team-verde h4 {border-color:#28a745;}
         .team-naranja h4 {border-color:#ff9800;}
+        /* -- NUEVO -- Estilo para el botón de cambio de equipo */
+        .team-switch-btn { cursor:pointer; font-weight: bold; padding: 2px 6px; border-radius: 4px; color: white; margin-left: 5px; }
+        .team-switch-btn.verde { background-color: #28a745; }
+        .team-switch-btn.naranja { background-color: #ff9800; }
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
@@ -126,7 +129,7 @@
             tr{border:1px solid #ccc;margin-bottom:15px;border-radius:5px;padding:5px}
             td{border:none;border-bottom:1px solid #eee;position:relative;padding-left:50%;text-align:right}
             td:before{position:absolute;left:6px;width:45%;padding-right:10px;white-space:nowrap;text-align:left;font-weight:700}
-            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Bajas"}td:nth-of-type(4):before{content:"Fiabilidad"}td:nth-of-type(5):before{content:"Acción"}
+            td:nth-of-type(1):before{content:"Nombre"}td:nth-of-type(2):before{content:"Estado"}td:nth-of-type(3):before{content:"Equipo"}td:nth-of-type(4):before{content:"Bajas"}td:nth-of-type(5):before{content:"Fiabilidad"}td:nth-of-type(6):before{content:"Acción"}
             .status-radio{justify-content:flex-end}input[type=number]{width:70px}
             .admin-view .admin-only{display:block !important;}
         }
@@ -142,7 +145,7 @@
     </h1>
 
     <div class="login-info-container">
-        <div id="match-menu-icon">&#9776;<span class="notification-dot"></span>
+        <div id="match-menu-icon">☰<span class="notification-dot"></span>
             <div id="match-menu-dropdown">
                 <div class="menu-option" id="menu-option-equipos"><span class="notification-dot-text">🔴</span>Equipos</div>
                 <div class="menu-option" id="menu-option-finanzas">Finanzas</div>
@@ -167,7 +170,7 @@
         <div id="resultado"></div>
         <div id="weather-forecast">Cargando previsión del tiempo...</div>
         
-        <div style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
+        <div id="google-maps-link" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
           <a href="https://maps.app.goo.gl/ZzbkoFyTCXzEyMB68" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
         </div>
         
@@ -177,7 +180,7 @@
         </div>
         
         <table id="tabla-jugadores">
-            <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Bajas</th><th>Fiabilidad</th><th class="admin-only">Acción</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Estado</th><th class="admin-only">Equipo</th><th class="admin-only">Bajas</th><th>Fiabilidad</th><th class="admin-only">Acción</th></tr></thead>
             <tbody></tbody>
         </table>
 
@@ -204,6 +207,18 @@
 <div id="custom-prompt-modal" class="modal-overlay"><div class="modal-box"><h3 id="prompt-title" class="modal-title"></h3><input id="prompt-input" class="modal-input" type="password"><div class="modal-buttons"><button id="prompt-cancel" class="modal-button cancel">Cancelar</button><button id="prompt-ok" class="modal-button">Aceptar</button></div></div></div>
 <div id="equipment-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Material</h3><div class="equipment-question"><p>⚽ ¿Vas a llevar balón?</p><label><input type="radio" name="balon-radio" value="si"> Sí</label><label><input type="radio" name="balon-radio" value="no" checked> No</label></div><div class="equipment-question"><p>👕 ¿Vas a llevar petos?</p><label><input type="radio" name="petos-radio" value="si"> Sí</label><label><input type="radio" name="petos-radio" value="no" checked> No</label></div><div class="modal-buttons" style="margin-top: 20px;"><button id="equipment-cancel" class="modal-button cancel">Cancelar</button><button id="equipment-ok" class="modal-button">Aceptar</button></div></div></div>
 <div id="teams-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Equipos</h3><div id="teams-content" class="team-modal-container"></div><div class="modal-buttons" style="margin-top: 25px;"><button id="teams-ok" class="modal-button">Cerrar</button></div></div></div>
+
+<div id="victory-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 class="modal-title">¿Qué equipo ha ganado?</h3>
+        <div id="victory-teams-content" class="team-modal-container"></div>
+        <div class="modal-buttons" style="margin-top: 25px;">
+            <button id="victory-cancel" class="modal-button cancel">Cancelar</button>
+            <button id="victory-verde" class="modal-button" style="background-color:#28a745;">Gana Verde</button>
+            <button id="victory-naranja" class="modal-button" style="background-color:#ff9800;">Gana Naranja</button>
+        </div>
+    </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -291,9 +306,8 @@ function showEquipmentModal() {
         cancelBtn.onclick = () => close(null);
     });
 }
-function showTeamsModal() {
-    const modal = document.getElementById('teams-modal');
-    const contentDiv = modal.querySelector('#teams-content');
+// --- MODIFICADO --- Se extrae la lógica de mostrar equipos para reutilizarla
+function getTeamsHtml() {
     const jugadores = currentDbData.jugadores || {};
     const refuerzos = currentDbData.refuerzos || {};
     const equipoVerde = [], equipoNaranja = [];
@@ -309,10 +323,32 @@ function showTeamsModal() {
         }
     });
 
-    contentDiv.innerHTML = `<div class="team-column team-verde"><h4>&#128994; Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>&#128992; Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
+    return `<div class="team-column team-verde"><h4>🟢 Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>🟠 Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
+}
+
+function showTeamsModal() {
+    const modal = document.getElementById('teams-modal');
+    modal.querySelector('#teams-content').innerHTML = getTeamsHtml();
     modal.style.display = 'flex';
     modal.querySelector('#teams-ok').onclick = () => modal.style.display = 'none';
 }
+
+// --- NUEVO --- Modal para seleccionar equipo ganador
+function showVictoryModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('victory-modal');
+        modal.querySelector('#victory-teams-content').innerHTML = getTeamsHtml();
+        modal.style.display = 'flex';
+        const verdeBtn = modal.querySelector('#victory-verde');
+        const naranjaBtn = modal.querySelector('#victory-naranja');
+        const cancelBtn = modal.querySelector('#victory-cancel');
+        const close = v => { modal.style.display = 'none'; verdeBtn.onclick = null; naranjaBtn.onclick = null; cancelBtn.onclick = null; resolve(v); };
+        verdeBtn.onclick = () => close('verde');
+        naranjaBtn.onclick = () => close('naranja');
+        cancelBtn.onclick = () => close(null);
+    });
+}
+
 
 // --- LÓGICA DE LOGIN (ORIGINAL)---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
@@ -402,6 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const player = currentDbData.jugadores[playerKey];
         const playerName = player.nombre;
         const bajasCount = player.bajas || 0;
+        const victoriasCount = player.victorias || 0; // --- AÑADIDO ---
         const last4Matches = Object.keys(history).sort().slice(-4);
         let attendedLast4 = 0;
         last4Matches.forEach(matchKey => {
@@ -423,7 +460,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
-        const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}`;
+        // --- MODIFICADO --- Se añade la línea de victorias
+        const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `Partidos Ganados: ${victoriasCount}`;
         showCustomAlert(`Fiabilidad de ${playerName}`, message);
     }
     
@@ -463,7 +501,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const dotIcon = document.querySelector('#match-menu-icon .notification-dot');
         const dotText = document.querySelector('#match-menu-dropdown .notification-dot-text');
-        if (totalConfirmados >= 10) {
+        
+        // --- MODIFICADO --- El punto rojo no aparece si el partido está pendiente de activar
+        if (totalConfirmados >= 10 && !isMatchPendingActivation) {
             dotIcon.style.display = 'block';
             dotText.style.display = 'inline';
         } else {
@@ -497,7 +537,8 @@ document.addEventListener('DOMContentLoaded', function() {
             recomendacion = "¡Confirma tu asistencia!";
         }
         
-        const refuerzosVisible = isAdmin || ((loggedInPlayer) && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos));
+        // --- MODIFICADO --- La sección de refuerzos no se muestra si el partido está pendiente de activar para no-admins
+        const refuerzosVisible = (isAdmin || (loggedInPlayer && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos))) && !isMatchPendingActivation;
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
 
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
@@ -513,14 +554,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderTable() {
         const tablaBody = document.querySelector("#tabla-jugadores tbody");
         tablaBody.innerHTML = '';
-        const { jugadores, historial } = currentDbData;
+        const { jugadores, historial, matchInfo } = currentDbData;
         const last4 = Object.keys(historial || {}).sort().slice(-4);
+        const totalConfirmados = Object.values(jugadores).filter(p => p.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
+
         Object.keys(jugadores || {}).sort((a,b) => jugadores[a].nombre.localeCompare(jugadores[b].nombre)).forEach(key => {
             const j = jugadores[key];
             const attended = last4.filter(k => historial[k]?.jugadores?.[key]?.status === 'si').length;
             const fiabilidad = last4.length > 0 ? `${(attended / last4.length * 100).toFixed(0)}%` : 'N/A';
             const status = j.status || 'pendiente';
-            tablaBody.innerHTML += `<tr data-key="${key}"><td>${j.nombre}</td><td><div class="status-radio"><label><input type="radio" name="status-${key}" value="si" ${status==='si'?'checked':''}> Sí</label><label><input type="radio" name="status-${key}" value="no" ${status==='no'?'checked':''}> No</label><label><input type="radio" name="status-${key}" value="pendiente" ${status==='pendiente'?'checked':''}> Pendiente</label></div></td><td class="admin-only"><input type="number" class="bajas" value="${j.bajas||0}" min="0"></td><td class="fiabilidad">${fiabilidad}</td><td class="admin-only"><button class="delete-player-btn" title="Eliminar">🗑️</button></td></tr>`;
+            
+            // --- MODIFICADO --- Se añade la celda de equipo
+            let equipoHtml = '-';
+            if(isAdmin && j.status === 'si' && j.equipo && totalConfirmados >= 10) {
+                 equipoHtml = `<span class="team-switch-btn ${j.equipo}" data-key="${key}">${j.equipo.charAt(0).toUpperCase()}</span>`;
+            } else if (j.equipo) {
+                 equipoHtml = j.equipo.charAt(0).toUpperCase();
+            }
+
+            tablaBody.innerHTML += `<tr data-key="${key}"><td>${j.nombre}</td><td><div class="status-radio"><label><input type="radio" name="status-${key}" value="si" ${status==='si'?'checked':''}> Sí</label><label><input type="radio" name="status-${key}" value="no" ${status==='no'?'checked':''}> No</label><label><input type="radio" name="status-${key}" value="pendiente" ${status==='pendiente'?'checked':''}> Pendiente</label></div></td><td class="admin-only">${equipoHtml}</td><td class="admin-only"><input type="number" class="bajas" value="${j.bajas||0}" min="0"></td><td class="fiabilidad">${fiabilidad}</td><td class="admin-only"><button class="delete-player-btn" title="Eliminar">🗑️</button></td></tr>`;
         });
     }
 
@@ -530,9 +582,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('whatsapp-button').style.display = isLoggedIn ? 'flex' : 'none';
         document.getElementById('tabla-jugadores').style.display = isLoggedIn && !isMatchPendingActivation ? '' : 'none';
         document.getElementById('admin-test-section').style.display = isAdmin ? 'block' : 'none';
-
-        // --- PUNTO 3 (REVERTIDO): El icono del menú vuelve a depender del inicio de sesión ---
         document.getElementById('match-menu-icon').style.display = isLoggedIn ? 'inline-block' : 'none';
+
+        // --- AÑADIDO --- Ocultar elementos para no-admins si el partido está pendiente
+        if(isMatchPendingActivation && !isAdmin){
+            document.getElementById('equipment-summary').style.display = 'none';
+            document.getElementById('weather-forecast').style.display = 'none';
+            document.getElementById('google-maps-link').style.display = 'none';
+            document.getElementById('refuerzos-section').style.display = 'none';
+        } else if (!isMatchPendingActivation) {
+            document.getElementById('weather-forecast').style.display = 'flex';
+            document.getElementById('google-maps-link').style.display = 'block';
+        }
+
 
         if (isAdmin) {
             const timeDisplay = document.getElementById('current-time-display');
@@ -577,16 +639,60 @@ document.addEventListener('DOMContentLoaded', function() {
         const activationTimeLimit = new Date(nextMatchDate);
         activationTimeLimit.setHours(22, 0, 0, 0);
         isMatchPendingActivation = ahora > activationTimeLimit;
-        if (isMatchPendingActivation && !isAdmin) {
+        
+        if (isMatchPendingActivation) { // --- MODIFICADO --- La condición ahora afecta a todos
             document.getElementById('pending-activation').style.display = 'block';
             document.getElementById('resultado').style.display = 'none';
+            document.getElementById('tabla-jugadores').style.display = isAdmin ? '' : 'none';
         } else {
             document.getElementById('pending-activation').style.display = 'none';
+            document.getElementById('resultado').style.display = 'block';
             renderSummary();
             renderTable();
         }
         applyVisibility();
     }
+    
+    // --- NUEVO --- Función para equilibrar equipos por victorias
+    function balanceTeamsByVictory(updates, jugadores) {
+        if (currentDbData.matchInfo?.manualTeamOverride) return updates; // No hacer nada si el admin cambió algo
+        
+        const confirmedPlayers = Object.keys(jugadores).filter(k => (updates[`/jugadores/${k}/status`] || jugadores[k].status) === 'si');
+        if (confirmedPlayers.length < 10) return updates;
+        
+        let equipoVerde = [], equipoNaranja = [];
+        confirmedPlayers.forEach(key => {
+            const playerTeam = updates[`/jugadores/${key}/equipo`] || jugadores[key].equipo;
+            const playerData = { key, victorias: jugadores[key].victorias || 0 };
+            if (playerTeam === 'verde') equipoVerde.push(playerData);
+            else if(playerTeam === 'naranja') equipoNaranja.push(playerData);
+        });
+        
+        if (equipoVerde.length !== equipoNaranja.length) return updates; // Solo balancear si los equipos están parejos
+        
+        equipoVerde.sort((a,b) => b.victorias - a.victorias);
+        equipoNaranja.sort((a,b) => b.victorias - a.victorias);
+
+        let verdeWins = 0, naranjaWins = 0;
+        for(let i=0; i < equipoVerde.length; i++){
+            if (equipoVerde[i].victorias > equipoNaranja[i].victorias) verdeWins++;
+            if (equipoNaranja[i].victorias > equipoVerde[i].victorias) naranjaWins++;
+        }
+        
+        if (Math.abs(verdeWins - naranjaWins) > 1) {
+            const [strongerTeam, weakerTeam, newTeamName] = verdeWins > naranjaWins ? [equipoVerde, equipoNaranja, 'naranja'] : [equipoNaranja, equipoVerde, 'verde'];
+            const playerToMove = strongerTeam[0]; // Mover al que tiene más victorias del equipo fuerte
+            const randomTargetIndex = Math.floor(Math.random() * weakerTeam.length);
+            const playerToReceive = weakerTeam[randomTargetIndex];
+            
+            // Realizar el intercambio en el objeto updates
+            updates[`/jugadores/${playerToMove.key}/equipo`] = newTeamName;
+            updates[`/jugadores/${playerToReceive.key}/equipo`] = newTeamName === 'verde' ? 'naranja' : 'verde';
+        }
+        
+        return updates;
+    }
+
 
     // --- LISTENERS ---
     database.ref().on('value', (snapshot) => {
@@ -609,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const newStatus = e.target.value;
             const player = currentDbData.jugadores[playerKey];
             const oldStatus = player.status;
-            const updates = {};
+            let updates = {};
             const jugadoresActuales = currentDbData.jugadores || {};
             const totalSiAntes = Object.values(jugadoresActuales).filter(j => j.status === 'si').length;
 
@@ -637,32 +743,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         updates[`/jugadores/${key}/equipo`] = i < 5 ? 'verde' : 'naranja';
                     });
                 } else if (totalSiDespues > 10) {
-                    if (player.equipo) {
-                        updates[`/jugadores/${playerKey}/equipo`] = player.equipo;
-                        const equipos = { verde: [], naranja: [] };
-                        Object.keys(jugadoresActuales).forEach(k => {
-                            const j = jugadoresActuales[k];
-                            let status = (k === playerKey) ? 'si' : j.status;
-                            if (status === 'si' && j.equipo) equipos[j.equipo].push({key: k, ...j});
-                        });
-                         if (Math.abs(equipos.verde.length - equipos.naranja.length) > 1) {
-                            const [abarrotado, nuevoEquipo] = equipos.verde.length > equipos.naranja.length ? [equipos.verde, 'naranja'] : [equipos.naranja, 'verde'];
-                            const jugadorAMover = abarrotado.filter(j => j.key !== playerKey).sort((a, b) => b.confirmTimestamp - a.confirmTimestamp)[0];
-                            if(jugadorAMover) updates[`/jugadores/${jugadorAMover.key}/equipo`] = nuevoEquipo;
-                        }
-                    } else {
-                        const equipos = { verde: 0, naranja: 0 };
-                        Object.values(jugadoresActuales).forEach(j => {
-                            if (j.status === 'si' && j.equipo) equipos[j.equipo]++;
-                        });
-                        updates[`/jugadores/${playerKey}/equipo`] = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
-                    }
+                    // --- MODIFICADO --- La regla de compensación prima sobre guardar el equipo
+                    const equipos = { verde: 0, naranja: 0 };
+                    Object.values(jugadoresActuales).forEach(j => {
+                        if (j.status === 'si' && j.equipo) equipos[j.equipo]++;
+                    });
+                    updates[`/jugadores/${playerKey}/equipo`] = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
                 }
+                 // --- AÑADIDO --- Llamar a la función de balanceo
+                 updates = balanceTeamsByVictory(updates, jugadoresActuales);
             }
             
             if (oldStatus === 'si' && newStatus !== 'si') {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = null;
+                updates[`/jugadores/${playerKey}/equipo`] = null; // Quitarlo del equipo
             }
 
             updates[`/jugadores/${playerKey}/status`] = newStatus;
@@ -692,12 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo]++; });
                 Object.values(refuerzos).forEach(r => { if (r.equipo) equipos[r.equipo]++; });
                 
-                let equipoAsignado;
-                if (equipos.verde <= equipos.naranja) {
-                    equipoAsignado = 'verde';
-                } else {
-                    equipoAsignado = 'naranja';
-                }
+                let equipoAsignado = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
                 newRefuerzoRef.update({ equipo: equipoAsignado });
             }
         });
@@ -724,6 +814,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('menu-option-equipos').addEventListener('click', async (e) => {
         e.stopPropagation();
         document.getElementById('match-menu-dropdown').style.display = 'none';
+        
+        // --- MODIFICADO --- Comprobar si el partido está pendiente
+        if(isMatchPendingActivation) {
+            return showCustomAlert('Aviso', 'Partido pendiente de activarse.');
+        }
+
         const totalConfirmados = Object.values(currentDbData.jugadores).filter(j => j.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
         if (totalConfirmados < 10) {
             showCustomAlert('Aviso', 'No hay suficientes jugadores para formar equipos.');
@@ -740,8 +836,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('apply-test-date').addEventListener('click', () => { simulatedTime = document.getElementById('test-date').value ? new Date(document.getElementById('test-date').value) : null; renderUI(); });
     document.getElementById('reset-test-date').addEventListener('click', () => { simulatedTime = null; document.getElementById('test-date').value = ''; renderUI(); });
+    
+    // --- MODIFICADO --- Lógica del botón de archivar
     document.getElementById('archive-button').addEventListener('click', async () => {
-        if (!isAdmin || !isMatchPendingActivation || !(await showCustomConfirm('Confirmar Acción', '¿Archivar y activar siguiente?'))) return;
+        if (!isAdmin || !isMatchPendingActivation) return;
+        
+        const winner = await showVictoryModal();
+        if (!winner) return; // Si el admin cancela, no hacer nada
+
         const ahora = getCurrentTime();
         const { jugadores, refuerzos, matchInfo } = currentDbData;
         const oldDate = new Date(matchInfo.nextMatchDate);
@@ -750,21 +852,38 @@ document.addEventListener('DOMContentLoaded', function() {
         const si = Object.values(jugadores).filter(j=>j.status==='si');
         const total = si.length + Object.keys(refuerzos||{}).length;
         const updates = {};
+        
         Object.keys(jugadores).forEach(k => {
+            const player = jugadores[k];
             updates[`/jugadores/${k}/status`] = 'pendiente';
             updates[`/jugadores/${k}/lateBailoutThisMatch`] = null;
             updates[`/jugadores/${k}/llevaBalon`] = null;
             updates[`/jugadores/${k}/llevaPetos`] = null;
             updates[`/jugadores/${k}/equipo`] = null;
             updates[`/jugadores/${k}/confirmTimestamp`] = null;
+
+            // --- AÑADIDO --- Sumar victoria
+            if(player.status === 'si' && player.equipo === winner){
+                updates[`/jugadores/${k}/victorias`] = (player.victorias || 0) + 1;
+            }
         });
-        updates[`/historial/${key}`] = { jugadores: Object.fromEntries(Object.entries(jugadores).map(([k,v])=>[k,{nombre:v.nombre,status:v.status==='pendiente'?'no':v.status}])), refuerzos:refuerzos||null, cancelado:total<10, con_extras:total>=10&&si.length<10 };
+        
+        updates[`/historial/${key}`] = { 
+            jugadores: Object.fromEntries(Object.entries(jugadores).map(([k,v])=>[k,{nombre:v.nombre,status:v.status==='pendiente'?'no':v.status}])), 
+            refuerzos:refuerzos||null, 
+            cancelado:total<10, 
+            con_extras:total>=10&&si.length<10,
+            ganador: winner // --- AÑADIDO ---
+        };
         updates['/refuerzos'] = null;
         updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
         updates['/matchInfo/refuerzosAbiertos'] = null;
+        updates['/matchInfo/manualTeamOverride'] = null; // --- AÑADIDO --- Resetear el override manual
+        
         await database.ref().update(updates);
         showCustomAlert('Éxito', 'Partido archivado y nuevo partido activado.');
     });
+
     document.getElementById('reset-button').addEventListener('click', async () => {
         if (!isAdmin || !(await showCustomConfirm('Confirmar Acción', '¿Resetear asistencia?'))) return;
         const updates = {};
@@ -776,6 +895,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updates[`/jugadores/${k}/confirmTimestamp`] = null;
         });
         updates['/refuerzos'] = null;
+        updates['/matchInfo/manualTeamOverride'] = null;
         database.ref().update(updates);
     });
     document.getElementById('toggle-refuerzos-button').addEventListener('click', () => { if(isAdmin) database.ref('matchInfo/refuerzosAbiertos').set(!currentDbData.matchInfo?.refuerzosAbiertos); });
@@ -784,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!newName) return;
         const newPass = await showCustomPrompt(`Contraseña para ${newName}`);
         if (!newPass) return;
-        database.ref('jugadores').push({ nombre: newName, password: newPass, status: "pendiente", bajas: 0 });
+        database.ref('jugadores').push({ nombre: newName, password: newPass, status: "pendiente", bajas: 0, victorias: 0 });
         document.getElementById('new-player-name').value = '';
     });
     document.body.addEventListener('click', async e => {
@@ -804,6 +924,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if(await showCustomConfirm('Eliminar Jugador', '¿Seguro? Esta acción es permanente.')) {
                 database.ref('jugadores/' + playerKey).remove();
             }
+        } else if (e.target.closest('.team-switch-btn')) { // --- AÑADIDO --- Listener para cambio de equipo
+            if(!isAdmin) return;
+            const el = e.target.closest('.team-switch-btn');
+            const playerKey = el.dataset.key;
+            const currentTeam = currentDbData.jugadores[playerKey].equipo;
+            const newTeam = currentTeam === 'verde' ? 'naranja' : 'verde';
+            const updates = {};
+            updates[`/jugadores/${playerKey}/equipo`] = newTeam;
+            updates['/matchInfo/manualTeamOverride'] = true;
+            database.ref().update(updates);
+            showCustomAlert('Cambio Manual', `Equipos desbalanceados manualmente.\nEl balanceo automático por victorias queda desactivado para este partido.`);
         }
     });
     
