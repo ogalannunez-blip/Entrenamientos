@@ -197,7 +197,7 @@
         <div id="weather-forecast">Cargando previsión del tiempo...</div>
         
         <div id="google-maps-link" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
-          <a href="http://googleusercontent.com/maps/google.com/0" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
+          <a href="https://maps.app.goo.gl/XNrNwAtzw4AuSpWx9" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
         </div>
         
         <div id="refuerzos-section" style="display:none;">
@@ -534,7 +534,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // --- INICIO DE LA LÓGICA DE PROBABILIDAD CON DECAIMIENTO ---
         let probabilidad, recomendacion, claseColor, overrideHtml = null;
-        let showRefuerzosForce = false;
         const maximoPosiblePlantilla = si.length + pendiente.length;
 
         let proyeccionPendientes = 0;
@@ -607,8 +606,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         // --- FIN DE LA LÓGICA DE PROBABILIDAD ---
         
-        const refuerzosVisible = (isAdmin || (loggedInPlayer && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos))) && !isMatchPendingActivation;
+        // --- INICIO DE LA LÓGICA DE REFUERZOS ---
+        const monday14h = new Date(matchDate);
+        monday14h.setDate(matchDate.getDate() - 2);
+        monday14h.setHours(14, 0, 0, 0);
+
+        const wednesday14h = new Date(matchDate);
+        wednesday14h.setHours(14, 0, 0, 0);
+
+        let shouldAutoOpen = false;
+        const lastMatch = Object.values(historial || {}).pop();
+
+        // Regla 1: Partido anterior cancelado
+        if (lastMatch?.cancelado && ahora >= monday14h && totalConfirmados < 10) {
+            shouldAutoOpen = true;
+        }
+        // Regla 2: Miércoles y faltan jugadores
+        if (ahora >= wednesday14h && totalConfirmados < 12) {
+            shouldAutoOpen = true;
+        }
+        // Regla 3: Probabilidad baja
+        if (probabilidad < 70 && ahora >= monday14h) {
+            shouldAutoOpen = true;
+        }
+        
+        // Activar en la base de datos si es necesario
+        if (shouldAutoOpen && !matchInfo?.refuerzosAbiertos) {
+            database.ref('matchInfo/refuerzosAbiertos').set(true);
+        }
+        
+        const isRefuerzosOpen = matchInfo?.refuerzosAbiertos || shouldAutoOpen;
+        const refuerzosVisible = (isAdmin || (loggedInPlayer && isRefuerzosOpen)) && !isMatchPendingActivation;
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
+        // --- FIN DE LA LÓGICA DE REFUERZOS ---
 
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i><span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span></li>`).join('');
