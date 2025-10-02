@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF--8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
@@ -13,14 +13,14 @@
         h1,h2{text-align:center;color:#1a73e8}
         h1{font-size:1.8em;display:flex;align-items:center;justify-content:center;gap:15px}
         .date-header{display:flex;justify-content:center;align-items:center;gap:15px;}
-        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px; flex-grow: 1;}
+        h2{border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-top:30px; flex-grow: 1; line-height: 1.5;}
         
         /* Iconos y etiquetas de Login */
         .login-controls{display:flex;justify-content:center;gap:30px;align-items:flex-start;}
         .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
         .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
         
-        /* --- MODIFICADO --- Estilos para los iconos de información */
+        /* Estilos para los iconos de información */
         .info-icon {
             cursor: pointer;
             display: inline-flex;
@@ -109,7 +109,7 @@
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;} /* --- MODIFICADO --- */
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;}
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -197,7 +197,7 @@
         <div id="weather-forecast">Cargando previsión del tiempo...</div>
         
         <div id="google-maps-link" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
-          <a href="https://maps.app.goo.gl/XNrNwAtzw4AuSpWx9" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
+          <a href="http://googleusercontent.com/maps/google.com/0" style="text-decoration: none; font-size: 1.2em; color: #1a73e8;"> 🚗 Ver ruta en Google Maps</a>
         </div>
         
         <div id="refuerzos-section" style="display:none;">
@@ -503,7 +503,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
         
-        // --- MODIFICADO --- Cambia el formato y color del título de la fecha
         const dateTitleEl = document.getElementById('match-date-title');
         const dateString = matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' });
         dateTitleEl.innerHTML = `Siguiente partido:<br>${dateString}&nbsp;<span id="match-stats-icon" class="info-icon">i</span>`;
@@ -533,36 +532,80 @@ document.addEventListener('DOMContentLoaded', function() {
             dotText.style.display = 'none';
         }
         
-        let mainHtml, claseColor, recomendacion;
+        // --- INICIO DE LA LÓGICA DE PROBABILIDAD CON DECAIMIENTO ---
+        let probabilidad, recomendacion, claseColor, overrideHtml = null;
+        let showRefuerzosForce = false;
         const maximoPosiblePlantilla = si.length + pendiente.length;
+
+        let proyeccionPendientes = 0;
+        if (pendiente.length > 0 && historial) {
+            const last4MatchesKeys = Object.keys(historial).sort().slice(-4);
+            pendiente.forEach(jugador => {
+                let attended = 0;
+                if(last4MatchesKeys.length > 0){
+                    last4MatchesKeys.forEach(matchKey => {
+                        if (historial[matchKey]?.jugadores?.[jugador.key]?.status === 'si') attended++;
+                    });
+                }
+                const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
+                const fiabilidad = Math.max(fiabilidadReal, 0.1); // Mínimo 10% de fiabilidad
+
+                const mondayStart = new Date(matchDate);
+                mondayStart.setDate(mondayStart.getDate() - 2);
+                mondayStart.setHours(0, 0, 0, 0);
+
+                const tuesdayEnd = new Date(mondayStart);
+                tuesdayEnd.setDate(tuesdayEnd.getDate() + 1);
+                tuesdayEnd.setHours(14, 0, 0, 0);
+
+                let factorTiempo = 1.0;
+                if (ahora > mondayStart) {
+                    if (ahora < tuesdayEnd) {
+                        factorTiempo = 1.0 - ((ahora - mondayStart) / (tuesdayEnd - mondayStart) * (1.0 - 0.33));
+                    } else {
+                        factorTiempo = 0.33;
+                    }
+                }
+                proyeccionPendientes += 10 * fiabilidad * factorTiempo;
+            });
+        }
+        probabilidad = (si.length * 10) + proyeccionPendientes;
 
         if (totalConfirmados >= 10) {
             claseColor = "verde";
-            mainHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
-            recomendacion = ``;
+            overrideHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
+            recomendacion = `Ya sois ${totalConfirmados}.`;
         } else if (maximoPosiblePlantilla < 10) {
             claseColor = "rojo";
-            mainHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>`;
+            overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>`;
             recomendacion = `Imposible llegar a 10. Se necesitan ${10 - totalConfirmados} refuerzo(s).`;
         } else {
-            let probabilidad = 0;
-            const last4 = Object.keys(historial || {}).sort().slice(-4);
-            if (last4.length > 0) {
-                pendiente.forEach(p => {
-                    const attended = last4.filter(key => historial[key]?.jugadores?.[p.key]?.status === 'si').length;
-                    probabilidad += 10 * Math.max(attended / last4.length, 0.1);
-                });
-            }
-            probabilidad = Math.min((si.length * 10) + probabilidad, 98);
-            claseColor = probabilidad >= 70 ? "ambar" : "rojo";
+            probabilidad = Math.min(probabilidad, 98);
+
+            const decayStart = new Date(matchDate);
+            decayStart.setDate(decayStart.getDate() - 1);
+            decayStart.setHours(14, 0, 0, 0); // Martes 14:00
             
-            // --- MODIFICADO --- Texto de probabilidad en la misma línea
-            mainHtml = `<div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;">
-                           <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}%</p>
-                           <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar <span id="probabilidad-info-icon" class="info-icon">i</span></p>
-                        </div>`;
-            recomendacion = "Por favor, confirmar lo antes posible.";
+            let finalDecayActive = false;
+            if (ahora > decayStart) {
+                if (ahora < matchDate) {
+                    probabilidad *= (1 - ((ahora - decayStart) / (matchDate - decayStart)));
+                    finalDecayActive = true;
+                } else {
+                    probabilidad = 0;
+                }
+            }
+            
+            if (probabilidad >= 70) { claseColor = "ambar"; }
+            else { claseColor = "rojo"; }
+
+            if (finalDecayActive) {
+                recomendacion = "¡El tiempo se agota! Confirma ya.";
+            } else {
+                recomendacion = "Por favor, confirmar lo antes posible.";
+            }
         }
+        // --- FIN DE LA LÓGICA DE PROBABILIDAD ---
         
         const refuerzosVisible = (isAdmin || (loggedInPlayer && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos))) && !isMatchPendingActivation;
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
@@ -572,9 +615,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const pendienteHtml = pendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const noHtml = no.map(j => `<li><span class="status-icon icon-no">✖</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
+        
         const resultadoDiv = document.getElementById('resultado');
         resultadoDiv.className = 'resultado ' + claseColor;
-        resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
+
+        if (overrideHtml) {
+            resultadoDiv.innerHTML = overrideHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        } else {
+            const mainHtml = `<div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;">
+                               <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}%</p>
+                               <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar <span id="probabilidad-info-icon" class="info-icon">i</span></p>
+                            </div>`;
+            resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
+        }
     }
 
     function renderTable() {
@@ -955,7 +1008,6 @@ document.addEventListener('DOMContentLoaded', function() {
             await database.ref().update(updates);
             showCustomAlert('Cambio Manual', `Equipos desbalanceados manualmente.\nEl balanceo automático por victorias queda desactivado para este partido.`);
         }
-        // --- MODIFICADO --- Texto de la ventana modal de probabilidad
         else if (e.target.id === 'probabilidad-info-icon') {
             const message = 'Esta probabilidad se calcula sumando:\n\n' +
                           '• 10% por cada jugador confirmado.\n' +
