@@ -20,6 +20,29 @@
         .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
         .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
         
+        /* --- NUEVO --- Estilos para los iconos de información */
+        .info-icon {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background-color: rgba(26, 115, 232, 0.1);
+            color: #1a73e8;
+            border-radius: 50%;
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            font-weight: bold;
+            font-size: 14px;
+            margin-left: 8px;
+            transition: background-color 0.3s ease;
+            user-select: none; /* Evita que el texto 'i' se seleccione */
+        }
+        .info-icon:hover {
+            background-color: rgba(26, 115, 232, 0.2);
+        }
+
         /* Tabla de jugadores */
         table{width:100%;border-collapse:collapse;margin-top:20px}
         th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
@@ -85,7 +108,7 @@
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;}
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:left;}
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -117,7 +140,6 @@
         .team-column li {padding:4px 0;}
         .team-verde h4 {border-color:#28a745;}
         .team-naranja h4 {border-color:#ff9800;}
-        /* -- NUEVO -- Estilo para el botón de cambio de equipo */
         .team-switch-btn { cursor:pointer; font-weight: bold; padding: 2px 6px; border-radius: 4px; color: white; margin-left: 5px; }
         .team-switch-btn.verde { background-color: #28a745; }
         .team-switch-btn.naranja { background-color: #ff9800; }
@@ -155,7 +177,10 @@
         <div id="login-info" class="highlight-login">Identifícate para responder →</div>
     </div>
     
-    <div class="date-header"><h2 id="match-date-title">Cargando...</h2></div>
+    <div class="date-header">
+        <h2 id="match-date-title">Cargando...</h2>
+        <span id="match-stats-icon" class="info-icon" style="display: none;">i</span>
+    </div>
 
     <div id="main-content" style="display: none;">
         <div id="pending-activation" style="display: none;">
@@ -249,7 +274,7 @@ let simulatedTime = null;
 let isMatchPendingActivation = false;
 let weatherHasBeenFetched = false;
 
-// --- SISTEMA DE VENTANAS MODALES (ORIGINAL + AÑADIDOS) ---
+// --- SISTEMA DE VENTANAS MODALES ---
 function showCustomAlert(title, message, onOk) {
     const el = document.getElementById('custom-alert-modal');
     el.querySelector('#modal-title').textContent = title;
@@ -307,7 +332,6 @@ function showEquipmentModal() {
         cancelBtn.onclick = () => close(null);
     });
 }
-// --- MODIFICADO --- Se extrae la lógica de mostrar equipos para reutilizarla
 function getTeamsHtml() {
     const jugadores = currentDbData.jugadores || {};
     const refuerzos = currentDbData.refuerzos || {};
@@ -326,15 +350,12 @@ function getTeamsHtml() {
 
     return `<div class="team-column team-verde"><h4>🟢 Equipo Verde (${equipoVerde.length})</h4><ul>${equipoVerde.map(n => `<li>${n}</li>`).join('')}</ul></div><div class="team-column team-naranja"><h4>🟠 Equipo Naranja (${equipoNaranja.length})</h4><ul>${equipoNaranja.map(n => `<li>${n}</li>`).join('')}</ul></div>`;
 }
-
 function showTeamsModal() {
     const modal = document.getElementById('teams-modal');
     modal.querySelector('#teams-content').innerHTML = getTeamsHtml();
     modal.style.display = 'flex';
     modal.querySelector('#teams-ok').onclick = () => modal.style.display = 'none';
 }
-
-// --- NUEVO --- Modal para seleccionar equipo ganador
 function showVictoryModal() {
     return new Promise(resolve => {
         const modal = document.getElementById('victory-modal');
@@ -350,8 +371,7 @@ function showVictoryModal() {
     });
 }
 
-
-// --- LÓGICA DE LOGIN (ORIGINAL)---
+// --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
     const loginInfoDiv = document.getElementById('login-info');
@@ -388,7 +408,7 @@ document.getElementById('player-login-wrapper').addEventListener('click', async 
 // --- LÓGICA PRINCIPAL ---
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- FUNCIONES INTERNAS (ORIGINALES + MODIFICACIONES) ---
+    // --- FUNCIONES INTERNAS ---
     function getCurrentTime() { return simulatedTime ? new Date(simulatedTime) : new Date(); }
     
     function getNextWednesday(now, forceNextWeek = false) {
@@ -421,14 +441,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function checkLateBailoutConditions(oldStatus, newStatus, player) {
         if (oldStatus !== 'si' || newStatus !== 'no' || player.lateBailoutThisMatch) return false;
-        
         const { jugadores, matchInfo } = currentDbData;
         const refuerzos = currentDbData.refuerzos || {};
         const matchDate = new Date(matchInfo.nextMatchDate);
         const wednesdayCutoff = new Date(matchDate);
         wednesdayCutoff.setHours(14, 0, 0, 0);
         if (getCurrentTime() < wednesdayCutoff) return false;
-        
         const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length;
         return totalConfirmados >= 10;
     }
@@ -439,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const player = currentDbData.jugadores[playerKey];
         const playerName = player.nombre;
         const bajasCount = player.bajas || 0;
-        const victoriasCount = player.victorias || 0; // --- AÑADIDO ---
+        const victoriasCount = player.victorias || 0;
         const last4Matches = Object.keys(history).sort().slice(-4);
         let attendedLast4 = 0;
         last4Matches.forEach(matchKey => {
@@ -461,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
-        // --- MODIFICADO --- Se añade la línea de victorias
         const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `Partidos Ganados: ${victoriasCount}`;
         showCustomAlert(`Fiabilidad de ${playerName}`, message);
     }
@@ -533,8 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             probabilidad = Math.min((si.length * 10) + probabilidad, 98);
             claseColor = probabilidad >= 70 ? "ambar" : "rojo";
-            // --- AÑADIDO --- Lógica para mostrar el icono de información que pediste
-            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.5em; font-weight: 400; display: block; margin-top: 5px;">Probabilidad de Jugar <span id="probabilidad-info-icon" style="cursor:pointer; font-size: 1.2em;">ℹ️</span></span></p>`;
+            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.5em; font-weight: 400; display: block; margin-top: 5px;">Probabilidad de Jugar <span id="probabilidad-info-icon" class="info-icon">i</span></span></p>`;
             recomendacion = "¡Confirma tu asistencia!";
         }
         
@@ -554,7 +570,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderTable() {
         const tablaBody = document.querySelector("#tabla-jugadores tbody");
         tablaBody.innerHTML = '';
-        const { jugadores, historial, matchInfo } = currentDbData;
+        const { jugadores, historial } = currentDbData;
         const last4 = Object.keys(historial || {}).sort().slice(-4);
         const totalConfirmados = Object.values(jugadores).filter(p => p.status === 'si').length + Object.keys(currentDbData.refuerzos || {}).length;
 
@@ -631,6 +647,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderUI() {
         if (!currentDbData) return;
         document.getElementById('main-content').style.display = 'block';
+        // --- AÑADIDO --- Mostrar el icono de estadísticas cuando hay datos
+        document.getElementById('match-stats-icon').style.display = 'inline-flex';
+
         const ahora = getCurrentTime();
         const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
         const activationTimeLimit = new Date(nextMatchDate);
@@ -929,13 +948,29 @@ document.addEventListener('DOMContentLoaded', function() {
             await database.ref().update(updates);
             showCustomAlert('Cambio Manual', `Equipos desbalanceados manualmente.\nEl balanceo automático por victorias queda desactivado para este partido.`);
         }
-        // --- AÑADIDO --- Listener para el nuevo icono de información de probabilidad
+        // --- MODIFICADO Y AÑADIDO --- Nuevos listeners para los iconos de información
         else if (e.target.id === 'probabilidad-info-icon') {
+            const horaActual = getCurrentTime().toLocaleString('es-ES', {hour: '2-digit', minute:'2-digit'});
             const message = 'Esta probabilidad se calcula sumando:\n\n' +
                           '• 10% por cada jugador confirmado.\n' +
-                          '• Un % adicional por cada jugador pendiente, basado en su fiabilidad de asistencia en los últimos 4 partidos.\n\n' +
+                          '• Un % adicional por cada jugador pendiente, basado en su fiabilidad de asistencia en los últimos 4 partidos.\n' +
+                          `• Hora actual: ${horaActual}. Según se acerca la hora del partido, la probabilidad se ve reducida.\n\n` +
                           'Para ver las estadísticas detalladas de un jugador, pulsa sobre su nombre en la lista.';
             showCustomAlert('Cálculo de Probabilidad', message);
+        }
+        else if (e.target.id === 'match-stats-icon') {
+            const historial = currentDbData.historial || {};
+            const partidosTotales = Object.keys(historial).length;
+            const partidosCancelados = Object.values(historial).filter(p => p.cancelado).length;
+            const partidosConExtras = Object.values(historial).filter(p => p.con_extras).length;
+            const partidosJugados = partidosTotales - partidosCancelados;
+
+            const message = `<strong>Partidos totales:</strong> ${partidosTotales}\n` +
+                          `<strong>Partidos jugados:</strong> ${partidosJugados}\n` +
+                          `<strong>Partidos cancelados:</strong> ${partidosCancelados}\n` +
+                          `<strong>Partidos jugados gracias a amigos:</strong> ${partidosConExtras}`;
+
+            showCustomAlert('Partidos Temporada 25-26', message);
         }
     });
     
