@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF--8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Partido de Fútbol</title>
     <style>
@@ -20,7 +20,7 @@
         .login-icon-wrapper{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
         .login-label{font-size:0.7em;font-weight:600;color:#555;margin-top:2px;}
         
-        /* --- NUEVO --- Estilos para los iconos de información */
+        /* --- MODIFICADO --- Estilos para los iconos de información */
         .info-icon {
             cursor: pointer;
             display: inline-flex;
@@ -28,8 +28,8 @@
             justify-content: center;
             width: 18px;
             height: 18px;
-            background-color: rgba(26, 115, 232, 0.1);
-            color: #1a73e8;
+            background-color: #1a73e8; /* Color de fondo azul sólido */
+            color: white; /* Color de la 'i' en blanco */
             border-radius: 50%;
             font-family: 'Times New Roman', serif;
             font-style: italic;
@@ -38,9 +38,10 @@
             margin-left: 8px;
             transition: background-color 0.3s ease;
             user-select: none; /* Evita que el texto 'i' se seleccione */
+            vertical-align: middle; /* Alineación vertical */
         }
         .info-icon:hover {
-            background-color: rgba(26, 115, 232, 0.2);
+            background-color: #4285f4; /* Un azul un poco más claro al pasar el ratón */
         }
 
         /* Tabla de jugadores */
@@ -108,7 +109,7 @@
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:flex-start;padding-top:10vh;z-index:1000}
         .modal-box{background:#fff;padding:25px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.3);text-align:center;width:90%;max-width:400px;color:#333}
         .modal-title{font-size:1.4em;font-weight:600;margin-top:0;margin-bottom:15px;color:#1a73e8}
-        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:left;}
+        .modal-message{font-size:1em;line-height:1.5;margin-bottom:25px;white-space:pre-wrap;text-align:center;} /* --- MODIFICADO --- */
         .modal-input{width:80%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:5px;font-size:1em;}
         .modal-buttons{display:flex;justify-content:center;gap:15px;}
         .modal-button{padding:10px 20px;border:none;border-radius:5px;background-color:#1a73e8;color:white;font-size:1em;cursor:pointer}
@@ -179,7 +180,6 @@
     
     <div class="date-header">
         <h2 id="match-date-title">Cargando...</h2>
-        <span id="match-stats-icon" class="info-icon" style="display: none;">i</span>
     </div>
 
     <div id="main-content" style="display: none;">
@@ -502,7 +502,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('equipment-summary').style.display = equipmentHtml ? 'block' : 'none';
         
         const matchDate = (matchInfo && matchInfo.nextMatchDate) ? new Date(matchInfo.nextMatchDate) : getNextWednesday(ahora);
-        document.getElementById('match-date-title').textContent = `Partido del ${matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+        
+        // --- MODIFICADO --- Cambia el formato y color del título de la fecha
+        const dateTitleEl = document.getElementById('match-date-title');
+        const dateString = matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' });
+        dateTitleEl.innerHTML = `Siguiente partido:<br>${dateString}&nbsp;<span id="match-stats-icon" class="info-icon">i</span>`;
+        dateTitleEl.style.color = '#28a745';
 
         const { si, pendiente, no } = Object.keys(jugadores).reduce((acc, key) => {
             const j = {...jugadores[key], key};
@@ -550,8 +555,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             probabilidad = Math.min((si.length * 10) + probabilidad, 98);
             claseColor = probabilidad >= 70 ? "ambar" : "rojo";
-            mainHtml = `<p class="probabilidad">${probabilidad.toFixed(0)}% <span style="font-size: 0.5em; font-weight: 400; display: block; margin-top: 5px;">Probabilidad de Jugar <span id="probabilidad-info-icon" class="info-icon">i</span></span></p>`;
-            recomendacion = "¡Confirma tu asistencia!";
+            
+            // --- MODIFICADO --- Texto de probabilidad en la misma línea
+            mainHtml = `<div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;">
+                           <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}%</p>
+                           <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar <span id="probabilidad-info-icon" class="info-icon">i</span></p>
+                        </div>`;
+            recomendacion = "Por favor, confirmar lo antes posible.";
         }
         
         const refuerzosVisible = (isAdmin || (loggedInPlayer && (claseColor === 'rojo' || matchInfo?.refuerzosAbiertos))) && !isMatchPendingActivation;
@@ -647,8 +657,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderUI() {
         if (!currentDbData) return;
         document.getElementById('main-content').style.display = 'block';
-        // --- AÑADIDO --- Mostrar el icono de estadísticas cuando hay datos
-        document.getElementById('match-stats-icon').style.display = 'inline-flex';
 
         const ahora = getCurrentTime();
         const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
@@ -917,7 +925,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('new-player-name').value = '';
     });
 
-    // --- MODIFICADO --- Se agrupan todos los listeners del body
     document.body.addEventListener('click', async e => {
         if (e.target.closest('.delete-refuerzo')) {
             const el = e.target.closest('.delete-refuerzo');
@@ -948,13 +955,12 @@ document.addEventListener('DOMContentLoaded', function() {
             await database.ref().update(updates);
             showCustomAlert('Cambio Manual', `Equipos desbalanceados manualmente.\nEl balanceo automático por victorias queda desactivado para este partido.`);
         }
-        // --- MODIFICADO Y AÑADIDO --- Nuevos listeners para los iconos de información
+        // --- MODIFICADO --- Texto de la ventana modal de probabilidad
         else if (e.target.id === 'probabilidad-info-icon') {
-            const horaActual = getCurrentTime().toLocaleString('es-ES', {hour: '2-digit', minute:'2-digit'});
             const message = 'Esta probabilidad se calcula sumando:\n\n' +
                           '• 10% por cada jugador confirmado.\n' +
                           '• Un % adicional por cada jugador pendiente, basado en su fiabilidad de asistencia en los últimos 4 partidos.\n' +
-                          `• Hora actual: ${horaActual}. Según se acerca la hora del partido, la probabilidad se ve reducida.\n\n` +
+                          '• Según se acerca la hora del partido la probabilidad se ve reducida.\n\n' +
                           'Para ver las estadísticas detalladas de un jugador, pulsa sobre su nombre en la lista.';
             showCustomAlert('Cálculo de Probabilidad', message);
         }
