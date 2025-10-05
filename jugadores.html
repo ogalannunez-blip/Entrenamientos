@@ -273,8 +273,8 @@ let currentDbData = null;
 let simulatedTime = null;
 let isMatchPendingActivation = false;
 let weatherHasBeenFetched = false;
-    set(ref(database, 'matchInfo/refuerzosAbiertos'), true);
-
+    
+database.ref('matchInfo/refuerzosAbiertos').set(true)
 // --- SISTEMA DE VENTANAS MODALES ---
 function showCustomAlert(title, message, onOk) {
     const el = document.getElementById('custom-alert-modal');
