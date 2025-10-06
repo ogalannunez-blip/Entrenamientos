@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // MODIFICACIÓN 4: Añadir texto si la entrada de amigos está abierta
         let refuerzosOpenHtml = '';
         if (isRefuerzosOpen && totalConfirmados < 10) {
-            refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em; color: #1a73e8; font-weight: bold;">&#x1F465; ABIERTA LA ENTRADA DE AMIGOS</p>`;
+            refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em; color: #1a73e8; font-weight: bold;">👥 ABIERTA LA ENTRADA DE AMIGOS</p>`;
         }
 
         if (overrideHtml) {
@@ -784,45 +784,65 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    // MODIFICACIÓN 6: Función completamente nueva para generar equipos equilibrados
-    function generateBalancedTeams(confirmedPlayerKeys, jugadores, historial) {
+    // MODIFICACIÓN 6: Función completamente nueva y corregida para generar equipos equilibrados
+    function generateBalancedTeams(jugadores, refuerzos, historial) {
         const updates = {};
         const totalPartidosHistorial = Object.keys(historial || {}).length;
 
-        // 1. Calcular el "poder" de cada jugador
-        const playersWithPower = confirmedPlayerKeys.map(key => {
-            const player = jugadores[key];
-            const victorias = player.victorias || 0;
-            const partidosJugados = Object.values(historial || {}).filter(h => h.jugadores?.[key]?.status === 'si').length;
-            
-            const porcentajeVictorias = partidosJugados > 0 ? (victorias / partidosJugados) : 0;
-            const porcentajeJugados = totalPartidosHistorial > 0 ? (partidosJugados / totalPartidosHistorial) : 0;
-            const factor = 1 + porcentajeJugados; // Factor de 1 a 2
-            const power = (porcentajeVictorias * 100) * factor;
+        let playersWithPower = [];
 
-            return { key, power };
+        // 1. Calcular "poder" para jugadores de la plantilla confirmados
+        Object.entries(jugadores).forEach(([key, player]) => {
+            if (player.status === 'si') {
+                const victorias = player.victorias || 0;
+                const partidosJugados = Object.values(historial || {}).filter(h => h.jugadores?.[key]?.status === 'si').length;
+                const porcentajeVictorias = partidosJugados > 0 ? (victorias / partidosJugados) : 0;
+                const porcentajeJugados = totalPartidosHistorial > 0 ? (partidosJugados / totalPartidosHistorial) : 0;
+                const factor = 1 + porcentajeJugados;
+                const power = (porcentajeVictorias * 100) * factor;
+                playersWithPower.push({ key, power, type: 'jugador' });
+            }
         });
 
-        // 2. Ordenar jugadores por "poder" descendente
+        // 2. Añadir refuerzos con un "poder" fijo de 50
+        Object.keys(refuerzos).forEach(key => {
+            playersWithPower.push({ key, power: 50, type: 'refuerzo' });
+        });
+
+        // 3. Ordenar todos los jugadores por "poder" descendente
         playersWithPower.sort((a, b) => b.power - a.power);
 
-        // 3. Distribuir en equipos usando un algoritmo voraz
+        // 4. Distribuir en equipos, priorizando número de jugadores y luego poder
         let equipoVerde = { power: 0, players: [] };
         let equipoNaranja = { power: 0, players: [] };
 
         playersWithPower.forEach(player => {
-            if (equipoVerde.power <= equipoNaranja.power) {
-                equipoVerde.players.push(player.key);
+            if (equipoVerde.players.length < equipoNaranja.players.length) {
+                equipoVerde.players.push(player);
                 equipoVerde.power += player.power;
-            } else {
-                equipoNaranja.players.push(player.key);
+            } else if (equipoNaranja.players.length < equipoVerde.players.length) {
+                equipoNaranja.players.push(player);
                 equipoNaranja.power += player.power;
+            } else { // Si tienen el mismo número de jugadores, se mira el poder
+                if (equipoVerde.power <= equipoNaranja.power) {
+                    equipoVerde.players.push(player);
+                    equipoVerde.power += player.power;
+                } else {
+                    equipoNaranja.players.push(player);
+                    equipoNaranja.power += player.power;
+                }
             }
         });
 
-        // 4. Preparar los updates para la base de datos
-        equipoVerde.players.forEach(key => { updates[`/jugadores/${key}/equipo`] = 'verde'; });
-        equipoNaranja.players.forEach(key => { updates[`/jugadores/${key}/equipo`] = 'naranja'; });
+        // 5. Preparar los updates para la base de datos
+        equipoVerde.players.forEach(p => {
+            const path = p.type === 'jugador' ? `/jugadores/${p.key}/equipo` : `/refuerzos/${p.key}/equipo`;
+            updates[path] = 'verde';
+        });
+        equipoNaranja.players.forEach(p => {
+            const path = p.type === 'jugador' ? `/jugadores/${p.key}/equipo` : `/refuerzos/${p.key}/equipo`;
+            updates[path] = 'naranja';
+        });
         
         return updates;
     }
@@ -870,27 +890,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 updates[`/jugadores/${playerKey}/llevaPetos`] = equipment.petos === 'si' ? true : null;
 
                 // MODIFICACIÓN 6: Lógica de equipos completamente renovada
-                if (totalSiDespues === 10) {
-                    const todosLosSiKeys = Object.keys(jugadores).filter(k => jugadores[k].status === 'si');
-                    todosLosSiKeys.push(playerKey);
-                    const teamUpdates = generateBalancedTeams(todosLosSiKeys, jugadores, historial);
-                    Object.assign(updates, teamUpdates);
+                const tempJugadores = JSON.parse(JSON.stringify(jugadores));
+                if(tempJugadores[playerKey]) tempJugadores[playerKey].status = 'si';
 
+                if (totalSiDespues === 10) {
+                    const teamUpdates = generateBalancedTeams(tempJugadores, refuerzos || {}, historial || {});
+                    Object.assign(updates, teamUpdates);
                 } else if (totalSiDespues > 10) {
                     const equipos = { verde: [], naranja: [] };
                     Object.entries(jugadores).forEach(([key, j]) => {
-                        if (j.status === 'si' && j.equipo && key !== playerKey) {
-                            equipos[j.equipo].push(key);
-                        }
+                        if (j.status === 'si' && j.equipo && key !== playerKey) equipos[j.equipo].push(key);
                     });
-
-                    if (totalSiDespues % 2 !== 0) { // Jugador 11, 13, 15... Re-equilibra por poder
-                         // Para simplificar, asignamos al que menos jugadores tenga, el rebalanceo completo es complejo en este punto.
-                         // Una versión más avanzada recalcularía el poder total.
-                        updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
-                    } else { // Jugador 12, 14, 16... Asigna al que menos tiene
-                        updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
-                    }
+                    Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
+                    
+                    // Asigna al equipo con menos jugadores
+                    updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
                 }
             }
             
@@ -898,7 +912,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = null;
                 updates[`/jugadores/${playerKey}/equipo`] = null;
-                // Opcional: Rebalancear equipos si alguien se cae
             }
 
             updates[`/jugadores/${playerKey}/status`] = newStatus;
@@ -919,17 +932,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoRef.key, timestamp: serverTimestamp };
 
         newRefuerzoRef.set(newRefuerzoData).then(() => {
-            const jugadores = currentDbData.jugadores || {};
-            const refuerzos = { ...currentDbData.refuerzos, [newRefuerzoRef.key]: newRefuerzoData };
-            const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos).length;
+            const { jugadores, historial, refuerzos } = currentDbData;
+            const tempRefuerzos = { ...(refuerzos || {}), [newRefuerzoRef.key]: newRefuerzoData };
+            const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(tempRefuerzos).length;
 
-            if(totalConfirmados >= 10) {
-                const equipos = { verde: 0, naranja: 0 };
-                Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo]++; });
-                Object.values(refuerzos).forEach(r => { if (r.equipo) equipos[r.equipo]++; });
-                
-                let equipoAsignado = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
-                newRefuerzoRef.update({ equipo: equipoAsignado });
+            if (totalConfirmados === 10) {
+                const teamUpdates = generateBalancedTeams(jugadores, tempRefuerzos, historial || {});
+                database.ref().update(teamUpdates);
+            } else if (totalConfirmados > 10) {
+                 const equipos = { verde: [], naranja: [] };
+                 Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo].push(j.key); });
+                 Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
+
+                 const equipoAsignado = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
+                 newRefuerzoRef.update({ equipo: equipoAsignado });
             }
         });
         
