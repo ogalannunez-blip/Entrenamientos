@@ -342,9 +342,10 @@ function getTeamsHtml() {
             (j.equipo === 'verde' ? equipoVerde : equipoNaranja).push(j.nombre);
         }
     });
+
     Object.values(refuerzos).forEach(r => {
         if (r.equipo) {
-            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`${r.nombre} (R)`);
+            (r.equipo === 'verde' ? equipoVerde : equipoNaranja).push(`<i>${r.nombre} (Amigo de ${r.anadidoPor})</i>`);
         }
     });
 
@@ -478,8 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 answeredAllTime++;
             }
         });
-
-        // MODIFICACIÓN 5: Añadir partidos jugados y % de victorias
+        
         const partidosJugados = attendedAllTime;
         const porcentajeVictorias = partidosJugados > 0 ? (victoriasCount / partidosJugados * 100).toFixed(0) : 0;
         const victoriasTexto = `Partidos Ganados: ${victoriasCount} de ${partidosJugados} (${porcentajeVictorias}%)`;
@@ -487,7 +487,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
         const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${partidosJugados} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `${victoriasTexto}`;
         
-        // MODIFICACIÓN 5: Cambiar título de la ventana modal
         showCustomAlert(`Estadísticas de ${playerName}`, message);
     }
     
@@ -540,7 +539,6 @@ document.addEventListener('DOMContentLoaded', function() {
             dotText.style.display = 'none';
         }
         
-        // --- INICIO DE LA LÓGICA DE PROBABILIDAD CON DECAIMIENTO ---
         let probabilidad, recomendacion, claseColor, overrideHtml = null;
         const maximoPosiblePlantilla = si.length + pendiente.length;
 
@@ -555,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 const fiabilidadReal = last4MatchesKeys.length > 0 ? (attended / last4MatchesKeys.length) : 0;
-                const fiabilidad = Math.max(fiabilidadReal, 0.1); // Mínimo 10% de fiabilidad
+                const fiabilidad = Math.max(fiabilidadReal, 0.1);
 
                 const mondayStart = new Date(matchDate);
                 mondayStart.setDate(mondayStart.getDate() - 2);
@@ -577,7 +575,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // MODIFICACIÓN 1: Los jugadores extra (refuerzos) suman un 10% a la probabilidad
         probabilidad = ((si.length + Object.keys(refuerzos).length) * 10) + proyeccionPendientes;
 
         if (totalConfirmados >= 10) {
@@ -593,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const decayStart = new Date(matchDate);
             decayStart.setDate(decayStart.getDate() - 1);
-            decayStart.setHours(14, 0, 0, 0); // Martes 14:00
+            decayStart.setHours(14, 0, 0, 0);
             
             let finalDecayActive = false;
             if (ahora > decayStart) {
@@ -605,7 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // MODIFICACIÓN 3: El cuadro se pone en rojo por debajo del 50%
             if (probabilidad >= 50) { claseColor = "ambar"; }
             else { claseColor = "rojo"; }
 
@@ -615,9 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 recomendacion = "Por favor, confirmar lo antes posible.";
             }
         }
-        // --- FIN DE LA LÓGICA DE PROBABILIDAD ---
         
-        // --- INICIO DE LA LÓGICA DE REFUERZOS ---
         const monday14h = new Date(matchDate);
         monday14h.setDate(matchDate.getDate() - 2);
         monday14h.setHours(14, 0, 0, 0);
@@ -632,23 +626,19 @@ document.addEventListener('DOMContentLoaded', function() {
         let shouldAutoOpen = false;
         const lastMatch = Object.values(historial || {}).pop();
 
-        // Regla 1: Partido anterior cancelado
         if (lastMatch?.cancelado && ahora >= monday14h && totalConfirmados < 10) {
             shouldAutoOpen = true;
         }
-        // Regla 2: Miércoles y faltan jugadores
         if (ahora >= wednesday14h && totalConfirmados < 12) {
             shouldAutoOpen = true;
         }
         
-        // MODIFICACIÓN 2: Nueva lógica para abrir refuerzos por probabilidad
-        if (ahora >= monday14h && ahora < tuesday14h && probabilidad < 50) { // De Lunes 14h a Martes 14h
+        if (ahora >= monday14h && ahora < tuesday14h && probabilidad < 50) {
             shouldAutoOpen = true;
-        } else if (ahora >= tuesday14h && probabilidad < 70) { // A partir del Martes 14h
+        } else if (ahora >= tuesday14h && probabilidad < 70) {
             shouldAutoOpen = true;
         }
         
-        // Activar en la base de datos si es necesario
         if (shouldAutoOpen && !matchInfo?.refuerzosAbiertos) {
             database.ref('matchInfo/refuerzosAbiertos').set(true);
         }
@@ -656,8 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const isRefuerzosOpen = matchInfo?.refuerzosAbiertos || shouldAutoOpen;
         const refuerzosVisible = (isAdmin || (loggedInPlayer && isRefuerzosOpen)) && !isMatchPendingActivation;
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
-        // --- FIN DE LA LÓGICA DE REFUERZOS ---
-
+        
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i><span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span></li>`).join('');
         const pendienteHtml = pendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
@@ -667,7 +656,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultadoDiv = document.getElementById('resultado');
         resultadoDiv.className = 'resultado ' + claseColor;
 
-        // MODIFICACIÓN 4: Añadir texto si la entrada de amigos está abierta
         let refuerzosOpenHtml = '';
         if (isRefuerzosOpen && totalConfirmados < 10) {
             refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em; color: #1a73e8; font-weight: bold;">👥 ABIERTA LA ENTRADA DE AMIGOS</p>`;
@@ -784,14 +772,64 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    // MODIFICACIÓN 6: Función completamente nueva y corregida para generar equipos equilibrados
+    // NUEVA FUNCIÓN: Actualiza los datos para Tasker
+    function updateTaskerData(newData) {
+        if (!newData) return;
+
+        const { jugadores, refuerzos, Tasker: oldTaskerData } = newData;
+        const updates = {};
+
+        // 1. Calcular confirmados y pendientes
+        const si = Object.values(jugadores || {}).filter(j => j.status === 'si');
+        const pendiente = Object.values(jugadores || {}).filter(j => j.status === 'pendiente' || !j.status);
+        const newTotalConfirmados = si.length + Object.keys(refuerzos || {}).length;
+        const newTotalPendientes = pendiente.length;
+
+        // 2. Comprobar si partido está completo
+        const newPartidoCompleto = newTotalConfirmados >= 10;
+
+        // 3. Obtener listas de equipos
+        const equipoVerdeNombres = [];
+        const equipoNaranjaNombres = [];
+
+        Object.values(jugadores || {}).forEach(j => {
+            if (j.status === 'si' && j.equipo) {
+                if (j.equipo === 'verde') equipoVerdeNombres.push(j.nombre);
+                else if (j.equipo === 'naranja') equipoNaranjaNombres.push(j.nombre);
+            }
+        });
+        Object.values(refuerzos || {}).forEach(r => {
+            if (r.equipo) {
+                const nombreCompleto = `${r.nombre} (Amigo de ${r.anadidoPor})`;
+                if (r.equipo === 'verde') equipoVerdeNombres.push(nombreCompleto);
+                else if (r.equipo === 'naranja') equipoNaranjaNombres.push(nombreCompleto);
+            }
+        });
+        
+        equipoVerdeNombres.sort();
+        equipoNaranjaNombres.sort();
+
+        const newEquipoVerdeStr = equipoVerdeNombres.join(', ');
+        const newEquipoNaranjaStr = equipoNaranjaNombres.join(', ');
+
+        // Comparar con datos antiguos y añadir a updates solo si hay cambios
+        if ((oldTaskerData?.confirmados || 0) !== newTotalConfirmados) updates['/Tasker/confirmados'] = newTotalConfirmados;
+        if ((oldTaskerData?.pendientes || 0) !== newTotalPendientes) updates['/Tasker/pendientes'] = newTotalPendientes;
+        if ((oldTaskerData?.partidoCompleto || false) !== newPartidoCompleto) updates['/Tasker/partidoCompleto'] = newPartidoCompleto;
+        if ((oldTaskerData?.equipoVerde || '') !== newEquipoVerdeStr) updates['/Tasker/equipoVerde'] = newEquipoVerdeStr;
+        if ((oldTaskerData?.equipoNaranja || '') !== newEquipoNaranjaStr) updates['/Tasker/equipoNaranja'] = newEquipoNaranjaStr;
+        
+        // Si hay algo que actualizar, enviar a Firebase
+        if (Object.keys(updates).length > 0) {
+            database.ref().update(updates);
+        }
+    }
+
     function generateBalancedTeams(jugadores, refuerzos, historial) {
         const updates = {};
         const totalPartidosHistorial = Object.keys(historial || {}).length;
-
         let playersWithPower = [];
 
-        // 1. Calcular "poder" para jugadores de la plantilla confirmados
         Object.entries(jugadores).forEach(([key, player]) => {
             if (player.status === 'si') {
                 const victorias = player.victorias || 0;
@@ -804,15 +842,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // 2. Añadir refuerzos con un "poder" fijo de 50
         Object.keys(refuerzos).forEach(key => {
             playersWithPower.push({ key, power: 50, type: 'refuerzo' });
         });
 
-        // 3. Ordenar todos los jugadores por "poder" descendente
         playersWithPower.sort((a, b) => b.power - a.power);
 
-        // 4. Distribuir en equipos, priorizando número de jugadores y luego poder
         let equipoVerde = { power: 0, players: [] };
         let equipoNaranja = { power: 0, players: [] };
 
@@ -823,7 +858,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (equipoNaranja.players.length < equipoVerde.players.length) {
                 equipoNaranja.players.push(player);
                 equipoNaranja.power += player.power;
-            } else { // Si tienen el mismo número de jugadores, se mira el poder
+            } else {
                 if (equipoVerde.power <= equipoNaranja.power) {
                     equipoVerde.players.push(player);
                     equipoVerde.power += player.power;
@@ -834,7 +869,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // 5. Preparar los updates para la base de datos
         equipoVerde.players.forEach(p => {
             const path = p.type === 'jugador' ? `/jugadores/${p.key}/equipo` : `/refuerzos/${p.key}/equipo`;
             updates[path] = 'verde';
@@ -850,9 +884,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- LISTENERS ---
     database.ref().on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.jugadores) {
-            currentDbData = data;
+        const newData = snapshot.val();
+        if (newData && newData.jugadores) {
+            
+            // Llamada a la función de Tasker antes de actualizar la UI
+            updateTaskerData(newData);
+            
+            currentDbData = newData; // Actualizar el estado global
             renderUI();
             if(!weatherHasBeenFetched) fetchAndDisplayWeather();
         }
@@ -889,7 +927,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = equipment.balon === 'si' ? true : null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = equipment.petos === 'si' ? true : null;
 
-                // MODIFICACIÓN 6: Lógica de equipos completamente renovada
                 const tempJugadores = JSON.parse(JSON.stringify(jugadores));
                 if(tempJugadores[playerKey]) tempJugadores[playerKey].status = 'si';
 
@@ -903,7 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
                     
-                    // Asigna al equipo con menos jugadores
                     updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
                 }
             }
