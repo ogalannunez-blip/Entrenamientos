@@ -478,9 +478,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 answeredAllTime++;
             }
         });
+
+        // MODIFICACIÓN 5: Añadir partidos jugados y % de victorias
+        const partidosJugados = attendedAllTime;
+        const porcentajeVictorias = partidosJugados > 0 ? (victoriasCount / partidosJugados * 100).toFixed(0) : 0;
+        const victoriasTexto = `Partidos Ganados: ${victoriasCount} de ${partidosJugados} (${porcentajeVictorias}%)`;
+
         const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
-        const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${attendedAllTime} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `Partidos Ganados: ${victoriasCount}`;
-        showCustomAlert(`Fiabilidad de ${playerName}`, message);
+        const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${partidosJugados} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `${victoriasTexto}`;
+        
+        // MODIFICACIÓN 5: Cambiar título de la ventana modal
+        showCustomAlert(`Estadísticas de ${playerName}`, message);
     }
     
     function renderSummary() {
@@ -505,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const dateTitleEl = document.getElementById('match-date-title');
         const dateString = matchDate.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' });
-        dateTitleEl.innerHTML = `Siguiente partido:<br>${dateString}&nbsp;<span id="match-stats-icon" class="info-icon">i</span>`;
+        dateTitleEl.innerHTML = `Siguiente partido:<br>${dateString} <span id="match-stats-icon" class="info-icon">i</span>`;
         dateTitleEl.style.color = '#28a745';
 
         const { si, pendiente, no } = Object.keys(jugadores).reduce((acc, key) => {
@@ -568,7 +576,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 proyeccionPendientes += 10 * fiabilidad * factorTiempo;
             });
         }
-        probabilidad = (si.length * 10) + proyeccionPendientes;
+        
+        // MODIFICACIÓN 1: Los jugadores extra (refuerzos) suman un 10% a la probabilidad
+        probabilidad = ((si.length + Object.keys(refuerzos).length) * 10) + proyeccionPendientes;
 
         if (totalConfirmados >= 10) {
             claseColor = "verde";
@@ -595,7 +605,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            if (probabilidad >= 70) { claseColor = "ambar"; }
+            // MODIFICACIÓN 3: El cuadro se pone en rojo por debajo del 50%
+            if (probabilidad >= 50) { claseColor = "ambar"; }
             else { claseColor = "rojo"; }
 
             if (finalDecayActive) {
@@ -610,6 +621,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const monday14h = new Date(matchDate);
         monday14h.setDate(matchDate.getDate() - 2);
         monday14h.setHours(14, 0, 0, 0);
+        
+        const tuesday14h = new Date(matchDate);
+        tuesday14h.setDate(tuesday14h.getDate() - 1);
+        tuesday14h.setHours(14, 0, 0, 0);
 
         const wednesday14h = new Date(matchDate);
         wednesday14h.setHours(14, 0, 0, 0);
@@ -625,8 +640,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ahora >= wednesday14h && totalConfirmados < 12) {
             shouldAutoOpen = true;
         }
-        // Regla 3: Probabilidad baja
-        if (probabilidad < 70 && ahora >= monday14h) {
+        
+        // MODIFICACIÓN 2: Nueva lógica para abrir refuerzos por probabilidad
+        if (ahora >= monday14h && ahora < tuesday14h && probabilidad < 50) { // De Lunes 14h a Martes 14h
+            shouldAutoOpen = true;
+        } else if (ahora >= tuesday14h && probabilidad < 70) { // A partir del Martes 14h
             shouldAutoOpen = true;
         }
         
@@ -649,14 +667,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultadoDiv = document.getElementById('resultado');
         resultadoDiv.className = 'resultado ' + claseColor;
 
+        // MODIFICACIÓN 4: Añadir texto si la entrada de amigos está abierta
+        let refuerzosOpenHtml = '';
+        if (isRefuerzosOpen && totalConfirmados < 10) {
+            refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em; color: #1a73e8; font-weight: bold;">&#x1F465; ABIERTA LA ENTRADA DE AMIGOS</p>`;
+        }
+
         if (overrideHtml) {
-            resultadoDiv.innerHTML = overrideHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
+            resultadoDiv.innerHTML = overrideHtml + `<p class="recomendacion">${recomendacion}</p>` + refuerzosOpenHtml + listaHtml;
         } else {
             const mainHtml = `<div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;">
                                <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}%</p>
                                <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar <span id="probabilidad-info-icon" class="info-icon">i</span></p>
                             </div>`;
-            resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + listaHtml;
+            resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + refuerzosOpenHtml + listaHtml;
         }
     }
 
@@ -760,40 +784,45 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    function balanceTeamsByVictory(updates, jugadores) {
-        if (currentDbData.matchInfo?.manualTeamOverride) return updates;
-        
-        const confirmedPlayers = Object.keys(jugadores).filter(k => (updates[`/jugadores/${k}/status`] || jugadores[k].status) === 'si');
-        if (confirmedPlayers.length < 10) return updates;
-        
-        let equipoVerde = [], equipoNaranja = [];
-        confirmedPlayers.forEach(key => {
-            const playerTeam = updates[`/jugadores/${key}/equipo`] || jugadores[key].equipo;
-            const playerData = { key, victorias: jugadores[key].victorias || 0 };
-            if (playerTeam === 'verde') equipoVerde.push(playerData);
-            else if(playerTeam === 'naranja') equipoNaranja.push(playerData);
-        });
-        
-        if (equipoVerde.length !== equipoNaranja.length) return updates;
-        
-        equipoVerde.sort((a,b) => b.victorias - a.victorias);
-        equipoNaranja.sort((a,b) => b.victorias - a.victorias);
+    // MODIFICACIÓN 6: Función completamente nueva para generar equipos equilibrados
+    function generateBalancedTeams(confirmedPlayerKeys, jugadores, historial) {
+        const updates = {};
+        const totalPartidosHistorial = Object.keys(historial || {}).length;
 
-        let verdeWins = 0, naranjaWins = 0;
-        for(let i=0; i < equipoVerde.length; i++){
-            if (equipoVerde[i].victorias > equipoNaranja[i].victorias) verdeWins++;
-            if (equipoNaranja[i].victorias > equipoVerde[i].victorias) naranjaWins++;
-        }
-        
-        if (Math.abs(verdeWins - naranjaWins) > 1) {
-            const [strongerTeam, weakerTeam, newTeamName] = verdeWins > naranjaWins ? [equipoVerde, equipoNaranja, 'naranja'] : [equipoNaranja, equipoVerde, 'verde'];
-            const playerToMove = strongerTeam[0];
-            const randomTargetIndex = Math.floor(Math.random() * weakerTeam.length);
-            const playerToReceive = weakerTeam[randomTargetIndex];
+        // 1. Calcular el "poder" de cada jugador
+        const playersWithPower = confirmedPlayerKeys.map(key => {
+            const player = jugadores[key];
+            const victorias = player.victorias || 0;
+            const partidosJugados = Object.values(historial || {}).filter(h => h.jugadores?.[key]?.status === 'si').length;
             
-            updates[`/jugadores/${playerToMove.key}/equipo`] = newTeamName;
-            updates[`/jugadores/${playerToReceive.key}/equipo`] = newTeamName === 'verde' ? 'naranja' : 'verde';
-        }
+            const porcentajeVictorias = partidosJugados > 0 ? (victorias / partidosJugados) : 0;
+            const porcentajeJugados = totalPartidosHistorial > 0 ? (partidosJugados / totalPartidosHistorial) : 0;
+            const factor = 1 + porcentajeJugados; // Factor de 1 a 2
+            const power = (porcentajeVictorias * 100) * factor;
+
+            return { key, power };
+        });
+
+        // 2. Ordenar jugadores por "poder" descendente
+        playersWithPower.sort((a, b) => b.power - a.power);
+
+        // 3. Distribuir en equipos usando un algoritmo voraz
+        let equipoVerde = { power: 0, players: [] };
+        let equipoNaranja = { power: 0, players: [] };
+
+        playersWithPower.forEach(player => {
+            if (equipoVerde.power <= equipoNaranja.power) {
+                equipoVerde.players.push(player.key);
+                equipoVerde.power += player.power;
+            } else {
+                equipoNaranja.players.push(player.key);
+                equipoNaranja.power += player.power;
+            }
+        });
+
+        // 4. Preparar los updates para la base de datos
+        equipoVerde.players.forEach(key => { updates[`/jugadores/${key}/equipo`] = 'verde'; });
+        equipoNaranja.players.forEach(key => { updates[`/jugadores/${key}/equipo`] = 'naranja'; });
         
         return updates;
     }
@@ -821,8 +850,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const player = currentDbData.jugadores[playerKey];
             const oldStatus = player.status;
             let updates = {};
-            const jugadoresActuales = currentDbData.jugadores || {};
-            const totalSiAntes = Object.values(jugadoresActuales).filter(j => j.status === 'si').length;
+            const { jugadores, historial, refuerzos } = currentDbData;
+            const totalSiAntes = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
 
             if (checkLateBailoutConditions(oldStatus, newStatus, player)) {
                 const confirmMessage = '¿Seguro? Afectarás al partido.\n\nEs necesario avisar por WhatsApp del cambio.';
@@ -840,27 +869,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = equipment.balon === 'si' ? true : null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = equipment.petos === 'si' ? true : null;
 
-                if (totalSiDespues === 10) { 
-                    const todosLosSi = Object.keys(jugadoresActuales).filter(k => jugadoresActuales[k].status === 'si');
-                    todosLosSi.push(playerKey); 
-                    const shuffledKeys = todosLosSi.sort(() => 0.5 - Math.random());
-                    shuffledKeys.forEach((key, i) => {
-                        updates[`/jugadores/${key}/equipo`] = i < 5 ? 'verde' : 'naranja';
-                    });
+                // MODIFICACIÓN 6: Lógica de equipos completamente renovada
+                if (totalSiDespues === 10) {
+                    const todosLosSiKeys = Object.keys(jugadores).filter(k => jugadores[k].status === 'si');
+                    todosLosSiKeys.push(playerKey);
+                    const teamUpdates = generateBalancedTeams(todosLosSiKeys, jugadores, historial);
+                    Object.assign(updates, teamUpdates);
+
                 } else if (totalSiDespues > 10) {
-                    const equipos = { verde: 0, naranja: 0 };
-                    Object.values(jugadoresActuales).forEach(j => {
-                        if (j.status === 'si' && j.equipo) equipos[j.equipo]++;
+                    const equipos = { verde: [], naranja: [] };
+                    Object.entries(jugadores).forEach(([key, j]) => {
+                        if (j.status === 'si' && j.equipo && key !== playerKey) {
+                            equipos[j.equipo].push(key);
+                        }
                     });
-                    updates[`/jugadores/${playerKey}/equipo`] = equipos.verde <= equipos.naranja ? 'verde' : 'naranja';
+
+                    if (totalSiDespues % 2 !== 0) { // Jugador 11, 13, 15... Re-equilibra por poder
+                         // Para simplificar, asignamos al que menos jugadores tenga, el rebalanceo completo es complejo en este punto.
+                         // Una versión más avanzada recalcularía el poder total.
+                        updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
+                    } else { // Jugador 12, 14, 16... Asigna al que menos tiene
+                        updates[`/jugadores/${playerKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
+                    }
                 }
-                 updates = balanceTeamsByVictory(updates, jugadoresActuales);
             }
             
             if (oldStatus === 'si' && newStatus !== 'si') {
                 updates[`/jugadores/${playerKey}/llevaBalon`] = null;
                 updates[`/jugadores/${playerKey}/llevaPetos`] = null;
                 updates[`/jugadores/${playerKey}/equipo`] = null;
+                // Opcional: Rebalancear equipos si alguien se cae
             }
 
             updates[`/jugadores/${playerKey}/status`] = newStatus;
@@ -1040,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         else if (e.target.id === 'probabilidad-info-icon') {
             const message = 'Esta probabilidad se calcula sumando:\n\n' +
-                          '• 10% por cada jugador confirmado.\n' +
+                          '• 10% por cada jugador confirmado (plantilla o amigo).\n' +
                           '• Un % adicional por cada jugador pendiente, basado en su fiabilidad de asistencia en los últimos 4 partidos.\n' +
                           '• Según se acerca la hora del partido la probabilidad se ve reducida.\n\n' +
                           'Para ver las estadísticas detalladas de un jugador, pulsa sobre su nombre en la lista.';
