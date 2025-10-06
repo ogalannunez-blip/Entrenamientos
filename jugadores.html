@@ -772,23 +772,20 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    // NUEVA FUNCIÓN: Actualiza los datos para Tasker
-    function updateTaskerData(newData) {
+    // FUNCIÓN CORREGIDA para Tasker
+    function updateTaskerData(newData, oldData) {
         if (!newData) return;
 
-        const { jugadores, refuerzos, Tasker: oldTaskerData } = newData;
+        const { jugadores, refuerzos } = newData;
+        const oldTaskerData = oldData?.Tasker;
         const updates = {};
 
-        // 1. Calcular confirmados y pendientes
         const si = Object.values(jugadores || {}).filter(j => j.status === 'si');
         const pendiente = Object.values(jugadores || {}).filter(j => j.status === 'pendiente' || !j.status);
         const newTotalConfirmados = si.length + Object.keys(refuerzos || {}).length;
         const newTotalPendientes = pendiente.length;
-
-        // 2. Comprobar si partido está completo
         const newPartidoCompleto = newTotalConfirmados >= 10;
 
-        // 3. Obtener listas de equipos
         const equipoVerdeNombres = [];
         const equipoNaranjaNombres = [];
 
@@ -812,14 +809,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const newEquipoVerdeStr = equipoVerdeNombres.join(', ');
         const newEquipoNaranjaStr = equipoNaranjaNombres.join(', ');
 
-        // Comparar con datos antiguos y añadir a updates solo si hay cambios
-        if ((oldTaskerData?.confirmados || 0) !== newTotalConfirmados) updates['/Tasker/confirmados'] = newTotalConfirmados;
-        if ((oldTaskerData?.pendientes || 0) !== newTotalPendientes) updates['/Tasker/pendientes'] = newTotalPendientes;
-        if ((oldTaskerData?.partidoCompleto || false) !== newPartidoCompleto) updates['/Tasker/partidoCompleto'] = newPartidoCompleto;
-        if ((oldTaskerData?.equipoVerde || '') !== newEquipoVerdeStr) updates['/Tasker/equipoVerde'] = newEquipoVerdeStr;
-        if ((oldTaskerData?.equipoNaranja || '') !== newEquipoNaranjaStr) updates['/Tasker/equipoNaranja'] = newEquipoNaranjaStr;
+        if ((oldTaskerData?.confirmados ?? -1) !== newTotalConfirmados) updates['/Tasker/confirmados'] = newTotalConfirmados;
+        if ((oldTaskerData?.pendientes ?? -1) !== newTotalPendientes) updates['/Tasker/pendientes'] = newTotalPendientes;
+        if ((oldTaskerData?.partidoCompleto ?? null) !== newPartidoCompleto) updates['/Tasker/partidoCompleto'] = newPartidoCompleto;
+        if ((oldTaskerData?.equipoVerde ?? null) !== newEquipoVerdeStr) updates['/Tasker/equipoVerde'] = newEquipoVerdeStr;
+        if ((oldTaskerData?.equipoNaranja ?? null) !== newEquipoNaranjaStr) updates['/Tasker/equipoNaranja'] = newEquipoNaranjaStr;
         
-        // Si hay algo que actualizar, enviar a Firebase
         if (Object.keys(updates).length > 0) {
             database.ref().update(updates);
         }
@@ -888,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (newData && newData.jugadores) {
             
             // Llamada a la función de Tasker antes de actualizar la UI
-            updateTaskerData(newData);
+            updateTaskerData(newData, currentDbData);
             
             currentDbData = newData; // Actualizar el estado global
             renderUI();
