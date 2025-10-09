@@ -74,7 +74,7 @@
 
         /* Iconos de acción */
         .delete-refuerzo, .delete-player-btn{cursor:pointer;font-size:1.1em;opacity:0.7;}
-        .delete-refuerzo{margin-left:auto;}
+        .delete-refuerzo{margin-left:auto; text-shadow: 0 0 3px white, 0 0 5px white;} /* Mejora de visibilidad */
         .delete-refuerzo:hover, .delete-player-btn:hover{opacity:1;}
         .delete-player-btn {background:none; border:none; padding:0 5px; font-size:1.2em;}
         
@@ -144,6 +144,14 @@
         .team-switch-btn { cursor:pointer; font-weight: bold; padding: 2px 6px; border-radius: 4px; color: white; margin-left: 5px; }
         .team-switch-btn.verde { background-color: #28a745; }
         .team-switch-btn.naranja { background-color: #ff9800; }
+        
+        /* Estilos para modal triangular */
+        #triangular-winners-list { list-style: none; padding: 0; margin-top: 15px; text-align: left; max-height: 40vh; overflow-y: auto; }
+        #triangular-winners-list li { padding: 8px; border-bottom: 1px solid #eee; }
+        #triangular-winners-list li:last-child { border-bottom: none; }
+        #triangular-winners-list label { display: flex; align-items: center; cursor: pointer; }
+        #triangular-winners-list input[type="checkbox"] { margin-right: 10px; width: 18px; height: 18px; }
+
 
         /* Estilos para móviles */
         @media screen and (max-width:600px){
@@ -233,18 +241,12 @@
 <div id="custom-prompt-modal" class="modal-overlay"><div class="modal-box"><h3 id="prompt-title" class="modal-title"></h3><input id="prompt-input" class="modal-input" type="password"><div class="modal-buttons"><button id="prompt-cancel" class="modal-button cancel">Cancelar</button><button id="prompt-ok" class="modal-button">Aceptar</button></div></div></div>
 <div id="equipment-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Material</h3><div class="equipment-question"><p>⚽ ¿Vas a llevar balón?</p><label><input type="radio" name="balon-radio" value="si"> Sí</label><label><input type="radio" name="balon-radio" value="no" checked> No</label></div><div class="equipment-question"><p>👕 ¿Vas a llevar petos?</p><label><input type="radio" name="petos-radio" value="si"> Sí</label><label><input type="radio" name="petos-radio" value="no" checked> No</label></div><div class="modal-buttons" style="margin-top: 20px;"><button id="equipment-cancel" class="modal-button cancel">Cancelar</button><button id="equipment-ok" class="modal-button">Aceptar</button></div></div></div>
 <div id="teams-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Equipos</h3><div id="teams-content" class="team-modal-container"></div><div class="modal-buttons" style="margin-top: 25px;"><button id="teams-ok" class="modal-button">Cerrar</button></div></div></div>
+<div id="victory-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">¿Qué equipo ha ganado?</h3><div id="victory-teams-content" class="team-modal-container"></div><div class="modal-buttons" style="margin-top: 25px;"><button id="victory-cancel" class="modal-button cancel">Cancelar</button><button id="victory-verde" class="modal-button" style="background-color:#28a745;">Gana Verde</button><button id="victory-naranja" class="modal-button" style="background-color:#ff9800;">Gana Naranja</button></div></div></div>
 
-<div id="victory-modal" class="modal-overlay">
-    <div class="modal-box">
-        <h3 class="modal-title">¿Qué equipo ha ganado?</h3>
-        <div id="victory-teams-content" class="team-modal-container"></div>
-        <div class="modal-buttons" style="margin-top: 25px;">
-            <button id="victory-cancel" class="modal-button cancel">Cancelar</button>
-            <button id="victory-verde" class="modal-button" style="background-color:#28a745;">Gana Verde</button>
-            <button id="victory-naranja" class="modal-button" style="background-color:#ff9800;">Gana Naranja</button>
-        </div>
-    </div>
-</div>
+<div id="match-type-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Tipo de Partido</h3><p class="modal-message">¿Se ha jugado un partido sencillo o un triangular?</p><div class="modal-buttons"><button id="match-type-sencillo" class="modal-button">Partido Sencillo</button><button id="match-type-triangular" class="modal-button">Triangular</button></div></div></div>
+<div id="triangular-winner-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Ganadores del Triangular</h3><p class="modal-message">Selecciona los jugadores que han ganado:</p><ul id="triangular-winners-list"></ul><div class="modal-buttons"><button id="triangular-cancel" class="modal-button cancel">Cancelar</button><button id="triangular-ok" class="modal-button">Aceptar</button></div></div></div>
+<div id="whatsapp-warning-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Aviso: Equipo Lleno</h3><p class="modal-message">Ya hay 12 jugadores en el equipo. Solo añade al jugador si ya has avisado en el grupo de WhatsApp.</p><div class="modal-buttons"><button id="warning-cancel" class="modal-button cancel">Cancelar</button><button id="warning-whatsapp" class="modal-button" style="background-color:#25D366;">Abrir WhatsApp</button><button id="warning-add" class="modal-button">Añadir Jugador</button></div></div></div>
+
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -371,10 +373,51 @@ function showVictoryModal() {
         cancelBtn.onclick = () => close(null);
     });
 }
+function showMatchTypeModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('match-type-modal');
+        modal.style.display = 'flex';
+        const sencilloBtn = modal.querySelector('#match-type-sencillo');
+        const triangularBtn = modal.querySelector('#match-type-triangular');
+        const close = v => { modal.style.display = 'none'; sencilloBtn.onclick = null; triangularBtn.onclick = null; resolve(v); };
+        sencilloBtn.onclick = () => close('sencillo');
+        triangularBtn.onclick = () => close('triangular');
+    });
+}
+function showTriangularWinnerModal(players) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('triangular-winner-modal');
+        const list = modal.querySelector('#triangular-winners-list');
+        list.innerHTML = players.map(p => `<li><label><input type="checkbox" data-key="${p.key}">${p.nombre}</label></li>`).join('');
+        modal.style.display = 'flex';
+        const okBtn = modal.querySelector('#triangular-ok');
+        const cancelBtn = modal.querySelector('#triangular-cancel');
+        const close = v => { modal.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; resolve(v); };
+        okBtn.onclick = () => {
+            const winners = Array.from(list.querySelectorAll('input:checked')).map(input => input.dataset.key);
+            resolve(winners);
+        };
+        cancelBtn.onclick = () => close(null);
+    });
+}
+function showWhatsappWarningModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('whatsapp-warning-modal');
+        modal.style.display = 'flex';
+        const cancelBtn = modal.querySelector('#warning-cancel');
+        const whatsappBtn = modal.querySelector('#warning-whatsapp');
+        const addBtn = modal.querySelector('#warning-add');
+        const close = v => { modal.style.display = 'none'; cancelBtn.onclick = null; whatsappBtn.onclick = null; addBtn.onclick = null; resolve(v); };
+        cancelBtn.onclick = () => close('cancel');
+        whatsappBtn.onclick = () => close('whatsapp');
+        addBtn.onclick = () => close('add');
+    });
+}
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
+    document.getElementById('match-menu-dropdown').style.display = 'none'; // Cierra el menú
     const loginInfoDiv = document.getElementById('login-info');
     if (isAdmin) {
         isAdmin = false; loggedInPlayer = null;
@@ -392,6 +435,7 @@ document.getElementById('admin-lock-wrapper').addEventListener('click', async ()
     }
 });
 document.getElementById('player-login-wrapper').addEventListener('click', async () => {
+    document.getElementById('match-menu-dropdown').style.display = 'none'; // Cierra el menú
     if (!currentDbData || !currentDbData.jugadores) return;
     const accessCode = await showCustomPrompt('Código de Acceso');
     if (!accessCode) return;
@@ -481,8 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         const partidosJugados = attendedAllTime;
-        const porcentajeVictorias = partidosJugados > 0 ? (victoriasCount / partidosJugados * 100).toFixed(0) : 0;
-        const victoriasTexto = `Partidos Ganados: ${victoriasCount} de ${partidosJugados} (${porcentajeVictorias}%)`;
+        const victoriasTexto = `Partidos Ganados: ${victoriasCount}`;
 
         const reliabilityAllTime = answeredAllTime > 0 ? (attendedAllTime / answeredAllTime * 100).toFixed(0) : 0;
         const message = `<strong>Últimos 4 Partidos:</strong>\n` + `Asistencias: ${attendedLast4} de ${last4Matches.length}\n` + `Fiabilidad: ${reliabilityLast4}%\n\n` + `<strong>Temporada 25-26:</strong>\n` + `Asistencias: ${partidosJugados} de ${allMatches.length}\n` + `Fiabilidad (Global): ${reliabilityAllTime}%\n` + `Bajas de última hora: ${bajasCount}\n` + `${victoriasTexto}`;
@@ -527,6 +570,7 @@ document.addEventListener('DOMContentLoaded', function() {
         si.sort(sortByName); pendiente.sort(sortByName); no.sort(sortByName);
         
         const totalConfirmados = si.length + Object.keys(refuerzos).length;
+        const totalPendientes = pendiente.length;
 
         const dotIcon = document.querySelector('#match-menu-icon .notification-dot');
         const dotText = document.querySelector('#match-menu-dropdown .notification-dot-text');
@@ -580,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (totalConfirmados >= 10) {
             claseColor = "verde";
             overrideHtml = `<p class="probabilidad" style="font-size: 1.8em; line-height: 1.2;">Partido Confirmado</p>`;
-            recomendacion = `Ya sois ${totalConfirmados}.`;
+            recomendacion = `Ya somos ${totalConfirmados}.`;
         } else if (maximoPosiblePlantilla < 10) {
             claseColor = "rojo";
             overrideHtml = `<p class="probabilidad" style="font-size: 1.5em; line-height: 1.2;">Partido en Riesgo</p>`;
@@ -648,17 +692,24 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('refuerzos-section').style.display = refuerzosVisible ? 'block' : 'none';
         
         const siHtml = si.map(j => `<li><span class="status-icon icon-si">✔</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
-        const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i><span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">🗑️</span></li>`).join('');
+        
+        const refuerzosHtml = Object.entries(refuerzos).map(([key, ref]) => {
+            const showDeleteIcon = isAdmin || (loggedInPlayer && loggedInPlayer.nombre === ref.anadidoPor);
+            const deleteIconHtml = showDeleteIcon ? `<span class="delete-refuerzo" data-key="${key}" data-owner="${ref.anadidoPor}">❌</span>` : '';
+            return `<li><span class="status-icon icon-si">✔</span><i>${ref.nombre} (Amigo de ${ref.anadidoPor})</i>${deleteIconHtml}</li>`;
+        }).join('');
+        
         const pendienteHtml = pendiente.map(j => `<li><span class="status-icon icon-pendiente">?</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
         const noHtml = no.map(j => `<li><span class="status-icon icon-no">✖</span><span class="summary-player-name" data-key="${j.key}">${j.nombre}</span></li>`).join('');
-        const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
+        
+        const listaHtml = `<div class="resumen"><strong>Respuestas (${totalConfirmados} confirmados, ${totalPendientes} pendientes):</strong><ul class="lista-apuntados">${siHtml}${refuerzosHtml}${pendienteHtml}${noHtml}</ul></div>`;
         
         const resultadoDiv = document.getElementById('resultado');
         resultadoDiv.className = 'resultado ' + claseColor;
 
         let refuerzosOpenHtml = '';
         if (isRefuerzosOpen && totalConfirmados < 10) {
-            refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em; color: #1a73e8; font-weight: bold;">👥 ABIERTA LA ENTRADA DE AMIGOS</p>`;
+            refuerzosOpenHtml = `<p class="recomendacion" style="margin-top: 5px; font-size: 0.9em;">Activada opción de añadir amigos</p>`;
         }
 
         if (overrideHtml) {
@@ -700,7 +751,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.toggle('admin-view', isAdmin);
         const isLoggedIn = isAdmin || loggedInPlayer;
         document.getElementById('whatsapp-button').style.display = isLoggedIn ? 'flex' : 'none';
-        document.getElementById('tabla-jugadores').style.display = isLoggedIn && !isMatchPendingActivation ? '' : 'none';
+        document.getElementById('tabla-jugadores').style.display = (isLoggedIn && !isMatchPendingActivation) || isAdmin ? '' : 'none';
         document.getElementById('admin-test-section').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('match-menu-icon').style.display = isLoggedIn ? 'inline-block' : 'none';
 
@@ -755,14 +806,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const ahora = getCurrentTime();
         const nextMatchDate = (currentDbData.matchInfo && currentDbData.matchInfo.nextMatchDate) ? new Date(currentDbData.matchInfo.nextMatchDate) : getNextWednesday(ahora);
-        const activationTimeLimit = new Date(nextMatchDate);
-        activationTimeLimit.setHours(22, 0, 0, 0);
-        isMatchPendingActivation = ahora > activationTimeLimit;
+        
+        isMatchPendingActivation = ahora > nextMatchDate;
         
         if (isMatchPendingActivation) {
-            document.getElementById('pending-activation').style.display = 'block';
+            document.getElementById('pending-activation').style.display = isAdmin ? 'none' : 'block';
             document.getElementById('resultado').style.display = 'none';
-            document.getElementById('tabla-jugadores').style.display = isAdmin ? '' : 'none';
         } else {
             document.getElementById('pending-activation').style.display = 'none';
             document.getElementById('resultado').style.display = 'block';
@@ -772,7 +821,6 @@ document.addEventListener('DOMContentLoaded', function() {
         applyVisibility();
     }
     
-    // FUNCIÓN CORREGIDA para Tasker
     function updateTaskerData(newData, oldData) {
         if (!newData) return;
 
@@ -882,10 +930,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const newData = snapshot.val();
         if (newData && newData.jugadores) {
             
-            // Llamada a la función de Tasker antes de actualizar la UI
             updateTaskerData(newData, currentDbData);
             
-            currentDbData = newData; // Actualizar el estado global
+            // --> PUNTO 2 (CORREGIDO): Lógica automática para 'partido iniciado' = false
+            if (newData.matchInfo?.nextMatchDate) {
+                 const ahora = getCurrentTime();
+                 const falseCutoff = new Date(newData.matchInfo.nextMatchDate);
+                 falseCutoff.setHours(22, 0, 0, 0);
+
+                 // Si ha pasado la hora de corte Y la variable no está ya en false, la actualizamos.
+                 if (ahora > falseCutoff && newData.Tasker?.['partido iniciado'] !== false) {
+                     database.ref('/Tasker/partido iniciado').set(false);
+                 }
+            }
+            
+            currentDbData = newData; 
             renderUI();
             if(!weatherHasBeenFetched) fetchAndDisplayWeather();
         }
@@ -951,36 +1010,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    document.getElementById('add-refuerzo-btn').addEventListener('click', () => {
-        const nombre = document.getElementById('refuerzo-nombre').value.trim();
+    document.getElementById('add-refuerzo-btn').addEventListener('click', async () => {
+        const nombreInput = document.getElementById('refuerzo-nombre');
+        const nombre = nombreInput.value.trim();
         if(!nombre) return;
         if(!isAdmin && !loggedInPlayer) {
             return showCustomAlert('Aviso', "Debes identificarte para añadir un refuerzo.");
         }
         
+        const { jugadores, refuerzos, historial } = currentDbData;
+        const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(refuerzos || {}).length;
+
+        if (totalConfirmados >= 12) {
+            const action = await showWhatsappWarningModal();
+            if (action === 'whatsapp') {
+                window.open(WHATSAPP_GROUP_LINK, '_blank');
+                return; 
+            } else if (action === 'cancel') {
+                return;
+            }
+        }
+
         const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
         const newRefuerzoRef = database.ref('refuerzos').push();
         const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoRef.key, timestamp: serverTimestamp };
-
-        newRefuerzoRef.set(newRefuerzoData).then(() => {
-            const { jugadores, historial, refuerzos } = currentDbData;
-            const tempRefuerzos = { ...(refuerzos || {}), [newRefuerzoRef.key]: newRefuerzoData };
-            const totalConfirmados = Object.values(jugadores).filter(j => j.status === 'si').length + Object.keys(tempRefuerzos).length;
-
-            if (totalConfirmados === 10) {
-                const teamUpdates = generateBalancedTeams(jugadores, tempRefuerzos, historial || {});
-                database.ref().update(teamUpdates);
-            } else if (totalConfirmados > 10) {
-                 const equipos = { verde: [], naranja: [] };
-                 Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo].push(j.key); });
-                 Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
-
-                 const equipoAsignado = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
-                 newRefuerzoRef.update({ equipo: equipoAsignado });
-            }
-        });
         
-        document.getElementById('refuerzo-nombre').value = '';
+        const updates = { [`/refuerzos/${newRefuerzoRef.key}`]: newRefuerzoData };
+
+        const tempRefuerzos = { ...(refuerzos || {}), [newRefuerzoRef.key]: newRefuerzoData };
+        const newTotalConfirmados = totalConfirmados + 1;
+
+        if (newTotalConfirmados === 10) {
+            Object.assign(updates, generateBalancedTeams(jugadores, tempRefuerzos, historial || {}));
+        } else if (newTotalConfirmados > 10) {
+            const equipos = { verde: [], naranja: [] };
+            Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo].push(j.key); });
+            Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
+            updates[`/refuerzos/${newRefuerzoRef.key}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
+        }
+        
+        await database.ref().update(updates);
+        nombreInput.value = '';
     });
 
     document.getElementById('match-menu-icon').addEventListener('click', (e) => {
@@ -1027,43 +1097,67 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('archive-button').addEventListener('click', async () => {
         if (!isAdmin || !isMatchPendingActivation) return;
         
-        const winner = await showVictoryModal();
-        if (!winner) return;
+        const matchType = await showMatchTypeModal();
+        if (!matchType) return;
 
-        const ahora = getCurrentTime();
         const { jugadores, refuerzos, matchInfo } = currentDbData;
+        const siPlantilla = Object.entries(jugadores).filter(([k,j]) => j.status === 'si').map(([k,j]) => ({...j, key:k}));
+        const totalConfirmados = siPlantilla.length + Object.keys(refuerzos || {}).length;
+        const updates = {};
+        let historialData = { 
+            jugadores: Object.fromEntries(Object.entries(jugadores).map(([k,v])=>[k,{nombre:v.nombre,status:v.status==='pendiente'?'no':v.status}])), 
+            refuerzos:refuerzos||null, 
+            cancelado:totalConfirmados<10, 
+            con_extras:totalConfirmados>=10 && siPlantilla.length<10,
+        };
+
+        if (matchType === 'sencillo') {
+            const winner = await showVictoryModal();
+            if (!winner) return;
+            historialData.ganador = winner;
+            historialData.tipo = 'sencillo';
+            Object.keys(jugadores).forEach(k => {
+                const player = jugadores[k];
+                if(player.status === 'si' && player.equipo === winner){
+                    updates[`/jugadores/${k}/victorias`] = (player.victorias || 0) + 1;
+                }
+            });
+        } else { // Triangular
+            const winners = await showTriangularWinnerModal(siPlantilla);
+            if (!winners) return;
+            historialData.ganadores = winners;
+            historialData.tipo = 'triangular';
+            winners.forEach(playerKey => {
+                updates[`/jugadores/${playerKey}/victorias`] = (jugadores[playerKey].victorias || 0) + 1;
+            });
+        }
+        
+        const ahora = getCurrentTime();
         const oldDate = new Date(matchInfo.nextMatchDate);
         const pad = n => n.toString().padStart(2,'0');
         const key = `${oldDate.getFullYear()}-${pad(oldDate.getMonth()+1)}-${pad(oldDate.getDate())}-${pad(oldDate.getHours())}${pad(oldDate.getMinutes())}${pad(oldDate.getSeconds())}`;
-        const si = Object.values(jugadores).filter(j=>j.status==='si');
-        const total = si.length + Object.keys(refuerzos||{}).length;
-        const updates = {};
         
         Object.keys(jugadores).forEach(k => {
-            const player = jugadores[k];
             updates[`/jugadores/${k}/status`] = 'pendiente';
             updates[`/jugadores/${k}/lateBailoutThisMatch`] = null;
             updates[`/jugadores/${k}/llevaBalon`] = null;
             updates[`/jugadores/${k}/llevaPetos`] = null;
             updates[`/jugadores/${k}/equipo`] = null;
             updates[`/jugadores/${k}/confirmTimestamp`] = null;
-
-            if(player.status === 'si' && player.equipo === winner){
-                updates[`/jugadores/${k}/victorias`] = (player.victorias || 0) + 1;
-            }
         });
         
-        updates[`/historial/${key}`] = { 
-            jugadores: Object.fromEntries(Object.entries(jugadores).map(([k,v])=>[k,{nombre:v.nombre,status:v.status==='pendiente'?'no':v.status}])), 
-            refuerzos:refuerzos||null, 
-            cancelado:total<10, 
-            con_extras:total>=10&&si.length<10,
-            ganador: winner
-        };
+        updates[`/historial/${key}`] = historialData;
         updates['/refuerzos'] = null;
-        updates['/matchInfo/nextMatchDate'] = getNextWednesday(ahora, true).toISOString();
+        
+        const nextWeek = new Date(ahora);
+        nextWeek.setDate(ahora.getDate() + 1);
+        updates['/matchInfo/nextMatchDate'] = getNextWednesday(nextWeek, true).toISOString();
+        
         updates['/matchInfo/refuerzosAbiertos'] = null;
         updates['/matchInfo/manualTeamOverride'] = null;
+        
+        // --> PUNTO 2 (CORREGIDO): Se activa 'partido iniciado' a true de forma manual
+        updates['/Tasker/partido iniciado'] = true;
         
         await database.ref().update(updates);
         showCustomAlert('Éxito', 'Partido archivado y nuevo partido activado.');
