@@ -246,6 +246,7 @@
 <div id="match-type-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Tipo de Partido</h3><p class="modal-message">¿Se ha jugado un partido sencillo o un triangular?</p><div class="modal-buttons"><button id="match-type-sencillo" class="modal-button">Partido Sencillo</button><button id="match-type-triangular" class="modal-button">Triangular</button></div></div></div>
 <div id="triangular-winner-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Ganadores del Triangular</h3><p class="modal-message">Selecciona los jugadores que han ganado:</p><ul id="triangular-winners-list"></ul><div class="modal-buttons"><button id="triangular-cancel" class="modal-button cancel">Cancelar</button><button id="triangular-ok" class="modal-button">Aceptar</button></div></div></div>
 <div id="whatsapp-warning-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Aviso: Equipo Lleno</h3><p class="modal-message">Ya hay 12 jugadores en el equipo. Solo añade al jugador si ya has avisado en el grupo de WhatsApp.</p><div class="modal-buttons"><button id="warning-cancel" class="modal-button cancel">Cancelar</button><button id="warning-whatsapp" class="modal-button" style="background-color:#25D366;">Abrir WhatsApp</button><button id="warning-add" class="modal-button">Añadir Jugador</button></div></div></div>
+<div id="date-picker-modal" class="modal-overlay"><div class="modal-box"><h3 class="modal-title">Próximo Partido</h3><p class="modal-message">Selecciona la fecha del siguiente partido.</p><input type="date" id="next-match-date-input" class="modal-input" style="width: auto; font-size: 1.2em; padding: 10px;"><div class="modal-buttons"><button id="date-picker-cancel" class="modal-button cancel">Cancelar</button><button id="date-picker-ok" class="modal-button">Aceptar</button></div></div></div>
 
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -395,7 +396,7 @@ function showTriangularWinnerModal(players) {
         const close = v => { modal.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; resolve(v); };
         okBtn.onclick = () => {
             const winners = Array.from(list.querySelectorAll('input:checked')).map(input => input.dataset.key);
-            resolve(winners);
+            close(winners); // <-- CAMBIO 1: Se llama a close() para cerrar el modal.
         };
         cancelBtn.onclick = () => close(null);
     });
@@ -413,11 +414,46 @@ function showWhatsappWarningModal() {
         addBtn.onclick = () => close('add');
     });
 }
+// --- CAMBIO 2: Nueva función para el modal de selección de fecha ---
+function showDatePickerModal() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('date-picker-modal');
+        const dateInput = modal.querySelector('#next-match-date-input');
+        dateInput.value = ''; // Limpiar valor anterior
+        modal.style.display = 'flex';
+
+        const okBtn = modal.querySelector('#date-picker-ok');
+        const cancelBtn = modal.querySelector('#date-picker-cancel');
+
+        const close = (value) => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(value);
+        };
+
+        okBtn.onclick = () => {
+            const selectedDate = dateInput.value;
+            if (!selectedDate) {
+                showCustomAlert('Error', 'Por favor, selecciona una fecha.');
+                return;
+            }
+            // La fecha del input (YYYY-MM-DD) se interpreta como UTC, hay que ajustar para evitar problemas de zona horaria
+            const dateObj = new Date(selectedDate + 'T12:00:00Z'); 
+            if (dateObj.getUTCDay() !== 3) { // 3 = Miércoles (Domingo=0, Lunes=1...)
+                showCustomAlert('Fecha no válida', 'Solo es posible seleccionar como día de la semana miércoles.');
+                return;
+            }
+            close(selectedDate);
+        };
+        cancelBtn.onclick = () => close(null);
+    });
+}
 
 // --- LÓGICA DE LOGIN ---
 database.ref('config/password').once('value', (snapshot) => { adminPassword = snapshot.val(); });
 document.getElementById('admin-lock-wrapper').addEventListener('click', async () => {
-    document.getElementById('match-menu-dropdown').style.display = 'none'; // Cierra el menú
+    document.getElementById('match-menu-dropdown').style.display = 'none';
     const loginInfoDiv = document.getElementById('login-info');
     if (isAdmin) {
         isAdmin = false; loggedInPlayer = null;
@@ -435,7 +471,7 @@ document.getElementById('admin-lock-wrapper').addEventListener('click', async ()
     }
 });
 document.getElementById('player-login-wrapper').addEventListener('click', async () => {
-    document.getElementById('match-menu-dropdown').style.display = 'none'; // Cierra el menú
+    document.getElementById('match-menu-dropdown').style.display = 'none'; // <-- CAMBIO 3: Cierra el menú
     if (!currentDbData || !currentDbData.jugadores) return;
     const accessCode = await showCustomPrompt('Código de Acceso');
     if (!accessCode) return;
@@ -615,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         factorTiempo = 0.33;
                     }
                 }
-                proyeccionPendientes += 10 * fiabilidad * factorTiempo;
+                proyeccionPendientes += 9 * fiabilidad * factorTiempo; // <-- CAMBIO 4: Multiplicador cambiado a 9
             });
         }
         
@@ -715,9 +751,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (overrideHtml) {
             resultadoDiv.innerHTML = overrideHtml + `<p class="recomendacion">${recomendacion}</p>` + refuerzosOpenHtml + listaHtml;
         } else {
+            // <-- CAMBIO 5: Reordenación del texto y el porcentaje.
             const mainHtml = `<div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;">
-                               <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}%</p>
-                               <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar <span id="probabilidad-info-icon" class="info-icon">i</span></p>
+                               <p style="margin: 0; font-size: 1.1em; font-weight: 400;">Probabilidad de jugar:</p>
+                               <p class="probabilidad" style="margin: 0;">${probabilidad.toFixed(0)}% <span id="probabilidad-info-icon" class="info-icon">i</span></p>
                             </div>`;
             resultadoDiv.innerHTML = mainHtml + `<p class="recomendacion">${recomendacion}</p>` + refuerzosOpenHtml + listaHtml;
         }
@@ -932,13 +969,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateTaskerData(newData, currentDbData);
             
-            // --> PUNTO 2 (CORREGIDO): Lógica automática para 'partido iniciado' = false
             if (newData.matchInfo?.nextMatchDate) {
                  const ahora = getCurrentTime();
                  const falseCutoff = new Date(newData.matchInfo.nextMatchDate);
                  falseCutoff.setHours(22, 0, 0, 0);
 
-                 // Si ha pasado la hora de corte Y la variable no está ya en false, la actualizamos.
                  if (ahora > falseCutoff && newData.Tasker?.['partido iniciado'] !== false) {
                      database.ref('/Tasker/partido iniciado').set(false);
                  }
@@ -1132,6 +1167,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // <-- CAMBIO 2: Lógica de selección de fecha
+        const selectedDate = await showDatePickerModal();
+        if (!selectedDate) return; // Si el usuario cancela, no se archiva.
+
         const ahora = getCurrentTime();
         const oldDate = new Date(matchInfo.nextMatchDate);
         const pad = n => n.toString().padStart(2,'0');
@@ -1149,14 +1188,14 @@ document.addEventListener('DOMContentLoaded', function() {
         updates[`/historial/${key}`] = historialData;
         updates['/refuerzos'] = null;
         
-        const nextWeek = new Date(ahora);
-        nextWeek.setDate(ahora.getDate() + 1);
-        updates['/matchInfo/nextMatchDate'] = getNextWednesday(nextWeek, true).toISOString();
+        // <-- CAMBIO 2: Construir la nueva fecha con la hora fija
+        const nextMatchDate = new Date(selectedDate);
+        nextMatchDate.setHours(21, 0, 0, 0);
+        updates['/matchInfo/nextMatchDate'] = nextMatchDate.toISOString();
         
         updates['/matchInfo/refuerzosAbiertos'] = null;
         updates['/matchInfo/manualTeamOverride'] = null;
         
-        // --> PUNTO 2 (CORREGIDO): Se activa 'partido iniciado' a true de forma manual
         updates['/Tasker/partido iniciado'] = true;
         
         await database.ref().update(updates);
