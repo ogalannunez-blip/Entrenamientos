@@ -1065,11 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         }
-
-        const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
-        const newRefuerzoRef = database.ref('refuerzos').push();
-        const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoRef.key, timestamp: serverTimestamp };
-        
+       
         const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
         const newRefuerzoRef = database.ref('refuerzos').push();
         const newRefuerzoKey = newRefuerzoRef.key; // Guarda la key
