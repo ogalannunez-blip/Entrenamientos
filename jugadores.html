@@ -1070,22 +1070,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const newRefuerzoRef = database.ref('refuerzos').push();
         const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoRef.key, timestamp: serverTimestamp };
         
-        const updates = { [`/refuerzos/${newRefuerzoRef.key}`]: newRefuerzoData };
+        const anadidoPor = isAdmin ? 'Admin' : loggedInPlayer.nombre;
+        const newRefuerzoRef = database.ref('refuerzos').push();
+        const newRefuerzoKey = newRefuerzoRef.key; // Guarda la key
+        const newRefuerzoData = { nombre, anadidoPor, key: newRefuerzoKey, timestamp: serverTimestamp };
+        
+        // 1. PRIMER UPDATE: Solo añade el refuerzo básico
+        await newRefuerzoRef.set(newRefuerzoData); 
 
-        const tempRefuerzos = { ...(refuerzos || {}), [newRefuerzoRef.key]: newRefuerzoData };
+        // Prepara para el segundo update (si es necesario)
+        const updatesEquipo = {};
+        const tempRefuerzos = { ...(refuerzos || {}), [newRefuerzoKey]: newRefuerzoData };
         const newTotalConfirmados = totalConfirmados + 1;
 
         if (newTotalConfirmados === 10) {
-            Object.assign(updates, generateBalancedTeams(jugadores, tempRefuerzos, historial || {}));
+            // Genera los updates para TODOS los equipos, incluyendo el nuevo refuerzo
+            Object.assign(updatesEquipo, generateBalancedTeams(jugadores, tempRefuerzos, historial || {}));
         } else if (newTotalConfirmados > 10) {
+            // Calcula solo el equipo para el NUEVO refuerzo
             const equipos = { verde: [], naranja: [] };
             Object.values(jugadores).forEach(j => { if (j.status === 'si' && j.equipo) equipos[j.equipo].push(j.key); });
             Object.values(refuerzos || {}).forEach(r => { if(r.equipo) equipos[r.equipo].push(r.key); });
-            updates[`/refuerzos/${newRefuerzoRef.key}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
+            updatesEquipo[`/refuerzos/${newRefuerzoKey}/equipo`] = equipos.verde.length <= equipos.naranja.length ? 'verde' : 'naranja';
         }
         
-        await database.ref().update(updates);
-        nombreInput.value = '';
+        // 2. SEGUNDO UPDATE (si hay algo que actualizar en los equipos)
+        if (Object.keys(updatesEquipo).length > 0) {
+            await database.ref().update(updatesEquipo);
+        }
+        
+        nombreInput.value = ''; // Limpiar input al final
     });
 
     document.getElementById('match-menu-icon').addEventListener('click', (e) => {
